@@ -150,3 +150,57 @@
 	border-color: rgba(248, 81, 73, 0.4);
 	color: var(--gh-danger-fg);
 }
+
+/* ============================================================================
+   PHYSICAL PRINT ENGINE OPTIMIZATION (INVOICES & 3-PART CHECKS)
+   ============================================================================ */
+@media print {
+	@page {
+		size: letter portrait;
+		margin: 0.35in 0.4in 0.35in 0.4in;
+	}
+
+	body,
+	html {
+		background: #ffffff !important;
+		color: #000000 !important;
+		font-size: 10pt !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* Suppress navigation, header, buttons and overlays */
+	header,
+	nav,
+	footer,
+	.no-print,
+	button,
+	aside {
+		display: none !important;
+	}
+
+	/* Reset backdrop modals during print */
+	.fixed.inset-0 {
+		position: static !important;
+		background: transparent !important;
+		padding: 0 !important;
+	}
+
+	.printable-document {
+		border: none !important;
+		box-shadow: none !important;
+		background: #ffffff !important;
+		color: #000000 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		page-break-inside: avoid;
+	}
+
+	.print-table th,
+	.print-table td {
+		border-color: #cbd5e1 !important;
+		color: #000000 !important;
+	}
+}

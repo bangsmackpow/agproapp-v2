@@ -14,6 +14,9 @@
 		Clock
 	} from 'lucide-svelte';
 
+	import InvoicePrintModal from './InvoicePrintModal.svelte';
+	import InvoiceDispatchModal from './InvoiceDispatchModal.svelte';
+
 	let { onOpenComposer, onSelectInvoice } = $props<{
 		onOpenComposer?: () => void;
 		onSelectInvoice?: (invoice: any) => void;
@@ -22,6 +25,8 @@
 	let invoices = $state<any[]>([]);
 	let loading = $state(false);
 	let activeFilter = $state<string>('all');
+	let activePrintInvoice = $state<any | null>(null);
+	let activeDispatchInvoice = $state<any | null>(null);
 
 	$effect(() => {
 		loadInvoices();
@@ -200,15 +205,24 @@
 
 								<!-- Quick Actions -->
 								<td class="p-3 text-center">
-									<div class="flex items-center justify-center gap-1">
+									<div class="flex items-center justify-center gap-1.5">
+										<button
+											type="button"
+											onclick={() => (activePrintInvoice = inv)}
+											class="gh-btn text-[11px] py-0.5 px-2"
+											title="Preview & Print Physical Letter Layout"
+										>
+											<Printer class="w-3 h-3 text-emerald-500" />
+											Print
+										</button>
 										{#if inv.status === 'draft'}
 											<button
 												type="button"
-												onclick={() => updateStatus(inv.id, 'sent')}
-												class="gh-btn text-[11px] py-0.5 px-2"
-												title="Mark as Sent / Dispatched"
+												onclick={() => (activeDispatchInvoice = inv)}
+												class="gh-btn text-[11px] py-0.5 px-2 text-blue-500 hover:bg-blue-500/10"
+												title="Electronic Distribution"
 											>
-												<Send class="w-3 h-3 text-blue-500" />
+												<Send class="w-3 h-3" />
 												Dispatch
 											</button>
 										{:else if inv.status === 'sent'}
@@ -231,4 +245,24 @@
 			</table>
 		</div>
 	</div>
+
+	<!-- Printable Invoice Modal (Physical Print Optimization) -->
+	{#if activePrintInvoice}
+		<InvoicePrintModal
+			invoice={activePrintInvoice}
+			onClose={() => (activePrintInvoice = null)}
+		/>
+	{/if}
+
+	<!-- Electronic Dispatch Modal -->
+	{#if activeDispatchInvoice}
+		<InvoiceDispatchModal
+			invoice={activeDispatchInvoice}
+			onClose={() => (activeDispatchInvoice = null)}
+			onDispatched={() => {
+				activeDispatchInvoice = null;
+				loadInvoices();
+			}}
+		/>
+	{/if}
 </div>
