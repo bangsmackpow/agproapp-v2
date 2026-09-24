@@ -2,6 +2,151 @@
 
 @layer base {
 	:root {
-		--font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+		--font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+
+		/* Light Mode GitHub Theme */
+		--gh-bg: #f6f8fa;
+		--gh-canvas-subtle: #ffffff;
+		--gh-canvas-inset: #f6f8fa;
+		--gh-border-default: #d0d7de;
+		--gh-border-muted: #d8dee4;
+		--gh-fg-default: #1f2328;
+		--gh-fg-muted: #57606a;
+		--gh-fg-subtle: #6e7781;
+		--gh-accent-fg: #0969da;
+		--gh-success-fg: #1a7f37;
+		--gh-success-bg: #dafbe1;
+		--gh-success-border: #4ac26b;
+		--gh-danger-fg: #cf222e;
+		--gh-danger-bg: #ffebe9;
+		--gh-attention-fg: #9a6700;
+		--gh-attention-bg: #fff8c5;
+		--gh-btn-bg: #ffffff;
+		--gh-btn-border: #d0d7de;
+		--gh-btn-hover: #f3f4f6;
+		--gh-btn-primary-bg: #1f883d;
+		--gh-btn-primary-hover: #1a7f37;
+		--gh-btn-primary-text: #ffffff;
 	}
+
+	.dark {
+		/* Dark Mode GitHub Theme */
+		--gh-bg: #0d1117;
+		--gh-canvas-subtle: #161b22;
+		--gh-canvas-inset: #010409;
+		--gh-border-default: #30363d;
+		--gh-border-muted: #21262d;
+		--gh-fg-default: #f0f6fc;
+		--gh-fg-muted: #8b949e;
+		--gh-fg-subtle: #6e7681;
+		--gh-accent-fg: #58a6ff;
+		--gh-success-fg: #3fb950;
+		--gh-success-bg: rgba(46, 160, 67, 0.15);
+		--gh-success-border: rgba(63, 185, 80, 0.4);
+		--gh-danger-fg: #f85149;
+		--gh-danger-bg: rgba(248, 81, 73, 0.15);
+		--gh-attention-fg: #d29922;
+		--gh-attention-bg: rgba(187, 128, 9, 0.15);
+		--gh-btn-bg: #21262d;
+		--gh-btn-border: #30363d;
+		--gh-btn-hover: #30363d;
+		--gh-btn-primary-bg: #238636;
+		--gh-btn-primary-hover: #2ea043;
+		--gh-btn-primary-text: #ffffff;
+	}
+
+	body {
+		background-color: var(--gh-bg);
+		color: var(--gh-fg-default);
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+	}
+}
+
+/* GitHub-style utility shortcuts */
+.gh-card {
+	background-color: var(--gh-canvas-subtle);
+	border: 1px solid var(--gh-border-default);
+	border-radius: 6px;
+}
+
+.gh-card-inset {
+	background-color: var(--gh-canvas-inset);
+	border: 1px solid var(--gh-border-muted);
+	border-radius: 6px;
+}
+
+.gh-border {
+	border-color: var(--gh-border-default);
+}
+
+.gh-border-muted {
+	border-color: var(--gh-border-muted);
+}
+
+.gh-btn {
+	background-color: var(--gh-btn-bg);
+	border: 1px solid var(--gh-btn-border);
+	color: var(--gh-fg-default);
+	border-radius: 6px;
+	padding: 5px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.gh-btn:hover:not(:disabled) {
+	background-color: var(--gh-btn-hover);
+}
+
+.gh-btn-primary {
+	background-color: var(--gh-btn-primary-bg);
+	border: 1px solid rgba(27, 31, 36, 0.15);
+	color: var(--gh-btn-primary-text);
+	border-radius: 6px;
+	padding: 5px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	transition: background-color 0.15s ease;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.gh-btn-primary:hover:not(:disabled) {
+	background-color: var(--gh-btn-primary-hover);
+}
+
+.gh-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 9999px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 14px;
+	border: 1px solid var(--gh-border-default);
+	background-color: var(--gh-canvas-inset);
+	color: var(--gh-fg-muted);
+}
+
+.gh-badge-success {
+	background-color: var(--gh-success-bg);
+	border-color: var(--gh-success-border);
+	color: var(--gh-success-fg);
+}
+
+.gh-badge-attention {
+	background-color: var(--gh-attention-bg);
+	border-color: rgba(187, 128, 9, 0.4);
+	color: var(--gh-attention-fg);
+}
+
+.gh-badge-danger {
+	background-color: var(--gh-danger-bg);
+	border-color: rgba(248, 81, 73, 0.4);
+	color: var(--gh-danger-fg);
 }

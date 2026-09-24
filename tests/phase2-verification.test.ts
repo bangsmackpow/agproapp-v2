@@ -1,8 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDocumentPayload, parseChannelBOL, parseWickmanChemical, parseAtticus, parseIBAgSupply } from '../src/lib/server/parsers/index.ts';
-import { amountToWords } from '../src/lib/utils/number-to-words.ts';
-import { api } from '../src/lib/server/api/index.ts';
+import { parseDocumentPayload, parseChannelBOL, parseWickmanChemical, parseAtticus, parseIBAgSupply } from '../src/lib/server/parsers/index';
+import { amountToWords } from '../src/lib/utils/number-to-words';
+import { api } from '../src/lib/server/api/index';
 
 describe('Phase 2: Intelligent Document Parse Controls', () => {
 	test('Channel Straight BOL Parser isolates BOL/CMR and Order numbers for Iowa seed audit', () => {
