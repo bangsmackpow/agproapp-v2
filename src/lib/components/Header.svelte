@@ -1,22 +1,35 @@
 <script lang="ts">
 	import { theme, type ThemeMode } from '$lib/stores/theme.svelte';
-	import { auth, PRESET_PERSONAS } from '$lib/stores/auth.svelte';
+	import { auth } from '$lib/stores/auth.svelte';
 	import type { UserRole } from '$lib/db/schema';
-	import { Sun, Moon, Monitor, Shield, User, ChevronDown, Check, Menu, X, Plane, Sprout } from 'lucide-svelte';
+	import {
+		Sun,
+		Moon,
+		Monitor,
+		Shield,
+		User,
+		ChevronDown,
+		Check,
+		Menu,
+		Plane,
+		LogOut,
+		ShieldCheck,
+		Lock
+	} from 'lucide-svelte';
 
 	let { onToggleMobileNav } = $props<{ onToggleMobileNav?: () => void }>();
 
-	let personaMenuOpen = $state(false);
+	let userMenuOpen = $state(false);
 	let themeMenuOpen = $state(false);
-
-	function switchRole(role: UserRole) {
-		auth.setRole(role);
-		personaMenuOpen = false;
-	}
 
 	function switchTheme(mode: ThemeMode) {
 		theme.setTheme(mode);
 		themeMenuOpen = false;
+	}
+
+	async function handleLogout() {
+		userMenuOpen = false;
+		await auth.logout();
 	}
 
 	const roleColors: Record<UserRole, string> = {
@@ -59,19 +72,21 @@
 			</a>
 		</div>
 
-		<!-- Right: Persona Switcher & Theme Selector -->
+		<!-- Right: Authenticated User Menu & Theme Selector -->
 		<div class="flex items-center gap-2 sm:gap-3">
-			<!-- Persona Switcher Dropdown (Crucial for Multi-User RBAC evaluation) -->
+			<!-- Authenticated User Profile Dropdown -->
 			<div class="relative">
 				<button
 					type="button"
-					onclick={() => { personaMenuOpen = !personaMenuOpen; themeMenuOpen = false; }}
+					onclick={() => { userMenuOpen = !userMenuOpen; themeMenuOpen = false; }}
 					class="gh-btn text-xs py-1 px-2.5 flex items-center gap-1.5"
-					aria-expanded={personaMenuOpen}
+					aria-expanded={userMenuOpen}
 				>
-					<User class="w-3.5 h-3.5 text-[var(--gh-fg-muted)]" />
+					<div class="w-5 h-5 rounded-full bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+						{auth.user?.name ? auth.user.name.charAt(0).toUpperCase() : 'U'}
+					</div>
 					<div class="flex items-center gap-1.5 text-left">
-						<span class="font-semibold hidden sm:inline">{auth.user.name}</span>
+						<span class="font-semibold hidden sm:inline">{auth.user?.name || 'Authenticated User'}</span>
 						<span class={`gh-badge ${roleColors[auth.role]} text-[10px] uppercase tracking-wider`}>
 							{auth.role}
 						</span>
@@ -79,52 +94,79 @@
 					<ChevronDown class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
 				</button>
 
-				{#if personaMenuOpen}
+				{#if userMenuOpen}
 					<!-- Backdrop to close -->
 					<div
 						role="presentation"
 						class="fixed inset-0 z-40"
-						onclick={() => (personaMenuOpen = false)}
-						onkeydown={(e) => e.key === 'Escape' && (personaMenuOpen = false)}
+						onclick={() => (userMenuOpen = false)}
+						onkeydown={(e) => e.key === 'Escape' && (userMenuOpen = false)}
 					></div>
-					<div class="absolute right-0 mt-1 w-64 gh-card shadow-xl z-50 py-1 text-xs">
-						<div class="px-3 py-2 border-b gh-border-muted bg-[var(--gh-canvas-inset)]">
-							<p class="font-semibold text-[var(--gh-fg-default)]">Active RBAC Persona</p>
-							<p class="text-[11px] text-[var(--gh-fg-muted)]">Switch roles to test permissions matrix:</p>
+					<div class="absolute right-0 mt-1 w-72 gh-card shadow-xl z-50 py-1 text-xs animate-in fade-in">
+						<!-- User Identity Details -->
+						<div class="px-3.5 py-3 border-b gh-border-muted bg-[var(--gh-canvas-inset)]">
+							<div class="flex items-center justify-between">
+								<p class="font-bold text-[var(--gh-fg-default)]">{auth.user?.name}</p>
+								<span class={`gh-badge ${roleColors[auth.role]} text-[9px] uppercase font-mono`}>
+									{auth.role}
+								</span>
+							</div>
+							<p class="text-[11px] text-[var(--gh-fg-muted)] font-mono">{auth.user?.email}</p>
+							<p class="text-[11px] text-[var(--gh-fg-subtle)] mt-0.5">{auth.user?.title}</p>
 						</div>
 
-						{#each (Object.keys(PRESET_PERSONAS) as UserRole[]) as r}
-							{@const persona = PRESET_PERSONAS[r]}
+						<!-- RBAC Security Privileges Summary -->
+						<div class="px-3.5 py-2.5 border-b gh-border-muted space-y-1.5 text-[11px]">
+							<p class="text-[10px] font-semibold uppercase tracking-wider text-[var(--gh-fg-subtle)]">
+								RBAC Authorization Privileges
+							</p>
+							<div class="flex items-center justify-between text-[11px]">
+								<span class="text-[var(--gh-fg-muted)]">CRM & Invoicing:</span>
+								<span class="text-emerald-500 font-semibold flex items-center gap-1">
+									<Check class="w-3 h-3" /> Full
+								</span>
+							</div>
+							<div class="flex items-center justify-between text-[11px]">
+								<span class="text-[var(--gh-fg-muted)]">Inventory Edits & Ingestion:</span>
+								{#if auth.canManageInventory}
+									<span class="text-emerald-500 font-semibold flex items-center gap-1">
+										<Check class="w-3 h-3" /> Full
+									</span>
+								{:else}
+									<span class="text-amber-500 font-semibold">Read Only</span>
+								{/if}
+							</div>
+							<div class="flex items-center justify-between text-[11px]">
+								<span class="text-[var(--gh-fg-muted)]">Corporate Checkwriting:</span>
+								{#if auth.canWriteChecks}
+									<span class="text-emerald-500 font-semibold flex items-center gap-1">
+										<Check class="w-3 h-3" /> Authorized
+									</span>
+								{:else}
+									<span class="text-rose-500 font-semibold flex items-center gap-1">
+										<Lock class="w-3 h-3" /> Locked (Admin)
+									</span>
+								{/if}
+							</div>
+						</div>
+
+						<!-- State Compliance Badge -->
+						<div class="px-3.5 py-2 border-b gh-border-muted bg-emerald-500/5 text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+							<ShieldCheck class="w-3.5 h-3.5 shrink-0" />
+							<span>Iowa Seed BOL Audit Certified</span>
+						</div>
+
+						<!-- Sign Out Action -->
+						<div class="p-1.5">
 							<button
 								type="button"
-								onclick={() => switchRole(r)}
-								class="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-[var(--gh-canvas-inset)] transition-colors {auth.role === r ? 'bg-[var(--gh-canvas-inset)]' : ''}"
+								onclick={handleLogout}
+								class="w-full text-left px-2.5 py-2 rounded-md flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 font-semibold transition-colors"
 							>
-								<div class="mt-0.5">
-									{#if auth.role === r}
-										<Check class="w-3.5 h-3.5 text-emerald-500" />
-									{:else}
-										<div class="w-3.5 h-3.5"></div>
-									{/if}
-								</div>
-								<div class="flex-1">
-									<div class="flex items-center justify-between">
-										<span class="font-medium text-[var(--gh-fg-default)]">{persona.name}</span>
-										<span class={`gh-badge ${roleColors[r]} text-[9px] uppercase`}>{r}</span>
-									</div>
-									<p class="text-[11px] text-[var(--gh-fg-muted)]">{persona.title}</p>
-									<p class="text-[10px] text-[var(--gh-fg-subtle)] mt-0.5">
-										{#if r === 'sales'}
-											CRM, Invoices, Read-Only Inventory
-										{:else if r === 'manager'}
-											CRM, Invoicing, Inventory Edit/Import
-										{:else}
-											Full System Access & Checkwriting
-										{/if}
-									</p>
-								</div>
+								<LogOut class="w-3.5 h-3.5" />
+								<span>Sign Out of Session</span>
 							</button>
-						{/each}
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -133,7 +175,7 @@
 			<div class="relative">
 				<button
 					type="button"
-					onclick={() => { themeMenuOpen = !themeMenuOpen; personaMenuOpen = false; }}
+					onclick={() => { themeMenuOpen = !themeMenuOpen; userMenuOpen = false; }}
 					class="gh-btn p-1.5 text-[var(--gh-fg-muted)] hover:text-[var(--gh-fg-default)]"
 					title="Toggle theme (Light / Dark / System)"
 					aria-label="Toggle theme"

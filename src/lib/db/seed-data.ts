@@ -1,6 +1,7 @@
 import type { Database } from '$lib/server/db';
 import {
 	users,
+	accounts,
 	customers,
 	vendors,
 	products,
@@ -9,40 +10,64 @@ import {
 	iowaComplianceLogs
 } from './schema';
 import { eq } from 'drizzle-orm';
+import { hashPassword } from '$lib/server/crypto';
+
+export const INITIAL_USER_ACCOUNTS = [
+	{
+		id: 'usr_admin_01',
+		name: 'Curtis Vance (Owner/Admin)',
+		email: 'admin@agpro.iowa',
+		role: 'admin' as const,
+		initialPassword: 'AgPro2026!Admin'
+	},
+	{
+		id: 'usr_mgr_01',
+		name: 'Sarah Lindqvist (Operations Mgr)',
+		email: 'manager@agpro.iowa',
+		role: 'manager' as const,
+		initialPassword: 'AgPro2026!Mgr'
+	},
+	{
+		id: 'usr_sales_01',
+		name: 'Jake Miller (Field Sales Rep)',
+		email: 'sales@agpro.iowa',
+		role: 'sales' as const,
+		initialPassword: 'AgPro2026!Sales'
+	}
+];
 
 export async function seedInitialData(db: Database) {
-	// 1. Seed Default Users for each RBAC persona
-	const existingAdmin = await db.query.users.findFirst({
-		where: eq(users.email, 'admin@agpro.iowa')
-	});
+	// 1. Seed Default Users & Initial Credential Accounts
+	for (const acc of INITIAL_USER_ACCOUNTS) {
+		const existingUser = await db.query.users.findFirst({
+			where: eq(users.id, acc.id)
+		});
 
-	if (!existingAdmin) {
-		await db.insert(users).values([
-			{
-				id: 'usr_admin_01',
-				name: 'Curtis Vance (Owner/Admin)',
-				email: 'admin@agpro.iowa',
-				role: 'admin',
+		if (!existingUser) {
+			await db.insert(users).values({
+				id: acc.id,
+				name: acc.name,
+				email: acc.email,
+				role: acc.role,
 				status: 'active',
 				emailVerified: true
-			},
-			{
-				id: 'usr_mgr_01',
-				name: 'Sarah Lindqvist (Operations Mgr)',
-				email: 'manager@agpro.iowa',
-				role: 'manager',
-				status: 'active',
-				emailVerified: true
-			},
-			{
-				id: 'usr_sales_01',
-				name: 'Jake Miller (Field Sales Rep)',
-				email: 'sales@agpro.iowa',
-				role: 'sales',
-				status: 'active',
-				emailVerified: true
-			}
-		]);
+			});
+		}
+
+		const existingAccount = await db.query.accounts.findFirst({
+			where: eq(accounts.userId, acc.id)
+		});
+
+		if (!existingAccount) {
+			const hashedPassword = await hashPassword(acc.initialPassword);
+			await db.insert(accounts).values({
+				id: `acc_${acc.id}`,
+				userId: acc.id,
+				accountId: acc.email,
+				providerId: 'credential',
+				password: hashedPassword
+			});
+		}
 	}
 
 	// 2. Seed Default Vendors

@@ -66,7 +66,7 @@
 				Precision Drone Fertilization, Seed & Ag Operations
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-1 max-w-2xl">
-				Logged in as <span class="font-semibold text-[var(--gh-fg-default)]">{auth.user.name}</span> (<span class="uppercase font-mono text-emerald-500 font-bold">{auth.role}</span>).
+				Logged in as <span class="font-semibold text-[var(--gh-fg-default)]">{auth.user?.name || 'Staff'}</span> (<span class="uppercase font-mono text-emerald-500 font-bold">{auth.role}</span>).
 				Unified cross-platform operations supporting field sales representatives on mobile tablets and office managers on desktop.
 			</p>
 		</div>

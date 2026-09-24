@@ -11,14 +11,17 @@ export async function apiFetch<T = any>(
 		headers.set('content-type', 'application/json');
 	}
 
-	// Attach active RBAC persona headers
-	headers.set('x-user-role', auth.role);
-	headers.set('x-user-id', auth.user.id);
+	// Attach active RBAC persona headers if user is logged in
+	if (auth.user) {
+		headers.set('x-user-role', auth.role);
+		headers.set('x-user-id', auth.user.id);
+	}
 
 	try {
 		const res = await fetch(url, {
 			...options,
-			headers
+			headers,
+			credentials: 'include'
 		});
 
 		const json = await res.json().catch(() => null);
@@ -39,7 +42,7 @@ export async function apiFetch<T = any>(
 	} catch (err: any) {
 		return {
 			data: null,
-			error: err.message || 'Network request failed',
+			error: err?.message || 'Network request failed',
 			status: 0
 		};
 	}

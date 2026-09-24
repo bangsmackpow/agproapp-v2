@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { getCookie } from 'hono/cookie';
 import type { AppBindings, AppVariables, AuthUser } from '$lib/server/rbac';
 import { getDb } from '$lib/server/db';
 import { seedInitialData } from '$lib/db/seed-data';
-import { users } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, sessions } from '$lib/db/schema';
+import { eq, and, gt } from 'drizzle-orm';
 
 // Sub-routers
 import { authRouter } from './routes/auth';
@@ -27,18 +28,33 @@ api.use('*', logger());
 api.use(
 	'*',
 	cors({
-		origin: '*',
+		origin: (origin) => origin || '*',
 		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-		allowHeaders: ['Content-Type', 'Authorization', 'x-user-role', 'x-user-id']
+		allowHeaders: ['Content-Type', 'Authorization', 'x-user-role', 'x-user-id'],
+		credentials: true
 	})
 );
 
-// Database auto-seeder & Session context middleware
+// Database auto-seeder & Session verification middleware
 api.use('*', async (c, next) => {
-	const roleHeader = c.req.header('x-user-role')?.toLowerCase();
-	const userIdHeader = c.req.header('x-user-id');
+	const path = c.req.path;
+	const isPublic =
+		path === '/api' ||
+		path === '/api/' ||
+		path === '/api/auth/login' ||
+		path === '/api/auth/logout' ||
+		path === '/api/auth/me';
 
 	let currentUser: AuthUser | null = null;
+
+	// Extract session token from cookie or Authorization header
+	let token = getCookie(c, 'agpro_session');
+	if (!token) {
+		const authHeader = c.req.header('authorization');
+		if (authHeader?.startsWith('Bearer ')) {
+			token = authHeader.substring(7);
+		}
+	}
 
 	if (c.env?.DB) {
 		const db = getDb(c.env.DB);
@@ -52,37 +68,61 @@ api.use('*', async (c, next) => {
 			console.warn('Auto-seed check error:', e);
 		}
 
-		if (userIdHeader) {
-			const found = await db.query.users.findFirst({ where: eq(users.id, userIdHeader) });
-			if (found) {
-				currentUser = { id: found.id, name: found.name, email: found.email, role: found.role };
-			}
-		} else if (roleHeader && ['sales', 'manager', 'admin'].includes(roleHeader)) {
-			const found = await db.query.users.findFirst({ where: eq(users.role, roleHeader as any) });
-			if (found) {
-				currentUser = { id: found.id, name: found.name, email: found.email, role: found.role };
+		if (token) {
+			try {
+				const activeSession = await db.query.sessions.findFirst({
+					where: and(
+						eq(sessions.token, token),
+						gt(sessions.expiresAt, new Date())
+					)
+				});
+
+				if (activeSession) {
+					const userRecord = await db.query.users.findFirst({
+						where: eq(users.id, activeSession.userId)
+					});
+					if (userRecord && userRecord.status === 'active') {
+						currentUser = {
+							id: userRecord.id,
+							name: userRecord.name,
+							email: userRecord.email,
+							role: userRecord.role
+						};
+					}
+				}
+			} catch (sessionErr) {
+				console.error('Session lookup error:', sessionErr);
 			}
 		}
 	}
 
-	// Fallback when DB is absent or role specified explicitly in headers for testing
-	if (!currentUser && roleHeader && ['sales', 'manager', 'admin'].includes(roleHeader)) {
-		currentUser = {
-			id: `usr_${roleHeader}_test`,
-			name: `Test ${roleHeader.toUpperCase()}`,
-			email: `${roleHeader}@agpro.iowa`,
-			role: roleHeader as any
-		};
-	} else if (!currentUser) {
-		currentUser = {
-			id: 'usr_admin_default',
-			name: 'Curtis Vance (Admin)',
-			email: 'admin@agpro.iowa',
-			role: 'admin'
-		};
+	// Dev / test harness fallback: allow x-user-role ONLY in non-production environments
+	const isProd = c.env?.APP_ENV === 'production';
+	if (!isProd && !currentUser) {
+		const roleHeader = c.req.header('x-user-role')?.toLowerCase();
+		if (roleHeader && ['sales', 'manager', 'admin'].includes(roleHeader)) {
+			currentUser = {
+				id: `usr_${roleHeader}_test`,
+				name: `Test ${roleHeader.toUpperCase()}`,
+				email: `${roleHeader}@agpro.iowa`,
+				role: roleHeader as any
+			};
+		}
 	}
 
-	c.set('user', currentUser);
+	c.set('user', currentUser as any);
+
+	// Enforce strict authentication gate in production
+	if (isProd && !currentUser && !isPublic && c.req.method !== 'OPTIONS') {
+		return c.json(
+			{
+				error: 'Unauthorized',
+				message: 'Authentication session required. Please log in with a valid AgPro account.'
+			},
+			401
+		);
+	}
+
 	await next();
 });
 
@@ -92,7 +132,8 @@ const healthHandler = (c: any) => {
 		status: 'healthy',
 		engine: 'AgPro Edge-Native Gateway (Hono on Cloudflare Workers)',
 		region: 'Iowa, USA (Midwest Ag Corridor)',
-		currentUser: user,
+		currentUser: user || null,
+		authenticated: !!user,
 		modules: [
 			'CRM & Iowa Seed Compliance',
 			'Unified Multi-Category Inventory (Chemical, Seed, Drone, Misc)',

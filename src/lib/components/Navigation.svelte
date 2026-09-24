@@ -147,7 +147,7 @@
 
 		<div class="p-3 border-t gh-border-muted bg-[var(--gh-canvas-inset)] text-[11px] text-[var(--gh-fg-muted)]">
 			<p class="font-medium text-[var(--gh-fg-default)]">Active Role: {auth.role.toUpperCase()}</p>
-			<p class="truncate">{auth.user.email}</p>
+			<p class="truncate">{auth.user?.email || ''}</p>
 		</div>
 	</div>
 {/if}
