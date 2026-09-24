@@ -13,6 +13,7 @@
     "db:migrate:local": "wrangler d1 migrations apply agpro-db --local",
     "db:migrate:prod": "wrangler d1 migrations apply agpro-db --remote",
     "db:studio": "drizzle-kit studio",
+    "test": "tsx --test tests/**/*.test.ts",
     "deploy": "vite build && wrangler pages deploy .svelte-kit/cloudflare"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "svelte": "^5.20.5",
     "svelte-check": "^4.1.4",
     "tailwindcss": "^4.0.9",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.3",
     "vite": "^6.1.1",
     "wrangler": "^3.111.0"
