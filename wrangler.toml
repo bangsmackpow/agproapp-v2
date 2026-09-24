@@ -14,8 +14,8 @@ IOWA_SEED_AUDIT_ENABLED = "true"
 # Primary Cloudflare D1 SQL Engine
 [[d1_databases]]
 binding = "DB"
-database_name = "agpro-db-v2"
-database_id = "25a5453e-4ff6-498c-8899-ce4cbd7e8439"
+database_name = "agpro-v2-prod"
+database_id = "f5315046-250a-4f80-9d89-91fed09ce8a7"
 migrations_dir = "./drizzle/migrations"
 
 # Object Storage for BOL Documents, Invoices, and Check PDFs
