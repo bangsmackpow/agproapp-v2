@@ -1,0 +1,30 @@
+name = "agpro-v2"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# SvelteKit with @sveltejs/adapter-cloudflare output
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+[vars]
+APP_NAME = "AgPro Management Systems"
+APP_ENV = "development"
+BETTER_AUTH_URL = "http://localhost:5173"
+IOWA_SEED_AUDIT_ENABLED = "true"
+
+# Primary Cloudflare D1 SQL Engine
+# Run `npx wrangler d1 create agpro-db` to generate production database_id
+[[d1_databases]]
+binding = "DB"
+database_name = "agpro-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "./drizzle/migrations"
+
+# Object Storage for BOL Documents, Invoices, and Check PDFs
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "agpro-documents"
+preview_bucket_name = "agpro-documents-preview"
+
+# Observability and Logging
+[observability]
+enabled = true
