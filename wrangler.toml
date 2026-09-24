@@ -1,5 +1,4 @@
 name = "agpro-v2"
-account_id = "0e528c886015cce349076fb7db222a88"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
@@ -22,8 +21,3 @@ migrations_dir = "./drizzle/migrations"
 [[r2_buckets]]
 binding = "DOCUMENTS"
 bucket_name = "agpro-documents"
-preview_bucket_name = "agpro-documents"
-
-# Observability and Logging
-[observability]
-enabled = true
