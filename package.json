@@ -1,0 +1,40 @@
+{
+  "name": "agpro-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "wrangler pages dev .svelte-kit/cloudflare",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply agpro-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply agpro-db --remote",
+    "db:studio": "drizzle-kit studio",
+    "deploy": "vite build && wrangler pages deploy .svelte-kit/cloudflare"
+  },
+  "dependencies": {
+    "better-auth": "^1.2.3",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.7.2",
+    "lucide-svelte": "^0.475.0",
+    "tailwind-merge": "^3.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@sveltejs/adapter-cloudflare": "^5.0.3",
+    "@sveltejs/kit": "^2.17.3",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tailwindcss/vite": "^4.0.9",
+    "drizzle-kit": "^0.31.11",
+    "svelte": "^5.20.5",
+    "svelte-check": "^4.1.4",
+    "tailwindcss": "^4.0.9",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.1",
+    "wrangler": "^3.111.0"
+  }
+}
