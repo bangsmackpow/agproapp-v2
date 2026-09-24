@@ -10,8 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply agpro-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply agpro-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply agpro-db-v2 --local",
+    "db:migrate:prod": "wrangler d1 migrations apply agpro-db-v2 --remote",
     "db:studio": "drizzle-kit studio",
     "test": "tsx --test tests/**/*.test.ts",
     "deploy": "vite build && wrangler pages deploy .svelte-kit/cloudflare"
