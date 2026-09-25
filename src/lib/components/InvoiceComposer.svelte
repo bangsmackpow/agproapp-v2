@@ -76,7 +76,14 @@
 		]);
 
 		if (custRes.data) customers = custRes.data.customers || [];
-		if (prodRes.data) products = prodRes.data.products || [];
+		if (prodRes.data) {
+			products = prodRes.data.products || [];
+			if (lineItems.length === 0) {
+				addLineItem();
+			}
+		} else if (lineItems.length === 0) {
+			addLineItem();
+		}
 		loading = false;
 	}
 
@@ -113,13 +120,14 @@
 
 	// Add Line Item
 	function addLineItem() {
-		if (products.length === 0) return;
-		const defaultProd = products[0];
-		let price = defaultProd.cashAppPrice;
-		if (pricingTier === 'financed_app') price = defaultProd.financedAppPrice;
-		else if (pricingTier === 'carry') price = defaultProd.carryPrice;
+		const defaultProd = products.length > 0 ? products[0] : null;
+		let price = defaultProd ? defaultProd.cashAppPrice : 0;
+		if (defaultProd) {
+			if (pricingTier === 'financed_app') price = defaultProd.financedAppPrice;
+			else if (pricingTier === 'carry') price = defaultProd.carryPrice;
+		}
 
-		const isRegulated = defaultProd.category === 'seed' || defaultProd.isRegulated;
+		const isRegulated = defaultProd ? (defaultProd.category === 'seed' || defaultProd.isRegulated) : false;
 
 		// If customer has a recent BOL in history for this seed, pre-populate
 		let suggestedBol = '';
@@ -129,19 +137,21 @@
 			suggestedOrder = customerComplianceHistory[0].orderNumber || '';
 		}
 
-		lineItems.push({
+		const newItem: LineItemState = {
 			id: crypto.randomUUID(),
-			productId: defaultProd.id,
-			productName: defaultProd.name,
-			category: defaultProd.category,
-			quantity: 10,
-			unit: defaultProd.unit,
-			unitCostBasis: defaultProd.costBasis,
+			productId: defaultProd ? defaultProd.id : '',
+			productName: defaultProd ? defaultProd.name : 'Custom / Uncataloged Item',
+			category: defaultProd ? defaultProd.category : 'misc',
+			quantity: 1,
+			unit: defaultProd ? defaultProd.unit : 'unit',
+			unitCostBasis: defaultProd ? defaultProd.costBasis : 0,
 			unitSellingPrice: price,
 			isRegulated,
 			bolNumber: suggestedBol,
 			orderNumber: suggestedOrder
-		});
+		};
+
+		lineItems = [...lineItems, newItem];
 	}
 
 	function updateLineItemProduct(itemId: string, newProductId: string) {
@@ -512,12 +522,27 @@
 									onchange={(e) => updateLineItemProduct(item.id, (e.target as HTMLSelectElement).value)}
 									class="w-full p-2 rounded border gh-border-default gh-card-inset text-xs font-medium"
 								>
-									{#each products as p}
-										<option value={p.id}>
-											{p.name} ({p.unit}) - Stock: {p.currentStock}
-										</option>
-									{/each}
+									{#if products.length === 0}
+										<option value="">No catalog items loaded (Custom)</option>
+									{:else}
+										{#if !item.productId}
+											<option value="">-- Choose a Product --</option>
+										{/if}
+										{#each products as p}
+											<option value={p.id}>
+												{p.name} ({p.unit}) - Stock: {p.currentStock}
+											</option>
+										{/each}
+									{/if}
 								</select>
+								{#if products.length === 0 || !item.productId}
+									<input
+										type="text"
+										bind:value={item.productName}
+										placeholder="Item description / name"
+										class="w-full p-1.5 rounded border gh-border-default gh-card-inset text-xs mt-1"
+									/>
+								{/if}
 							</div>
 
 							<!-- Quantity & Unit -->

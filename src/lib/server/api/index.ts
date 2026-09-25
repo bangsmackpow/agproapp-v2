@@ -59,9 +59,9 @@ api.use('*', async (c, next) => {
 	if (c.env?.DB) {
 		const db = getDb(c.env.DB);
 		try {
-			// Auto-seed baseline data if no users exist
-			const anyUser = await db.query.users.findFirst();
-			if (!anyUser) {
+			// Auto-seed baseline data if products are missing
+			const anyProduct = await db.query.products.findFirst();
+			if (!anyProduct) {
 				await seedInitialData(db);
 			}
 		} catch (e) {
