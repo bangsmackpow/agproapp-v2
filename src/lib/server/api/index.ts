@@ -130,8 +130,8 @@ const healthHandler = (c: any) => {
 	const user = c.get('user');
 	return c.json({
 		status: 'healthy',
-		engine: 'AgPro Edge-Native Gateway (Hono on Cloudflare Workers)',
-		region: 'Iowa, USA (Midwest Ag Corridor)',
+		engine: 'AgPro Solutions Gateway (Hono on Cloudflare Workers)',
+		region: 'Creston, Iowa (Southwest Ag Region)',
 		currentUser: user || null,
 		authenticated: !!user,
 		modules: [

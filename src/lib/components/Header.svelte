@@ -54,19 +54,19 @@
 				</button>
 			{/if}
 
-			<a href="/" class="flex items-center gap-2 text-inherit font-semibold text-sm sm:text-base tracking-tight hover:opacity-90">
+			<a href="/" class="flex items-center gap-2.5 text-inherit font-semibold text-sm sm:text-base tracking-tight hover:opacity-90">
 				<div class="w-8 h-8 rounded-md bg-emerald-600 flex items-center justify-center text-white shadow-sm font-bold">
 					<Plane class="w-4 h-4" />
 				</div>
 				<div class="flex flex-col">
 					<span class="font-bold flex items-center gap-1.5 text-[var(--gh-fg-default)]">
-						AgPro
-						<span class="text-xs px-1.5 py-0.2 rounded font-mono bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
-							Iowa
+						AgPro Solutions
+						<span class="text-[10px] px-1.5 py-0.2 rounded font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+							Creston, IA
 						</span>
 					</span>
 					<span class="text-[10px] text-[var(--gh-fg-muted)] leading-none hidden sm:inline">
-						Precision Drone & Seed Management
+						Putting The Farmer Back In Control
 					</span>
 				</div>
 			</a>
@@ -148,12 +148,6 @@
 									</span>
 								{/if}
 							</div>
-						</div>
-
-						<!-- State Compliance Badge -->
-						<div class="px-3.5 py-2 border-b gh-border-muted bg-emerald-500/5 text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-							<ShieldCheck class="w-3.5 h-3.5 shrink-0" />
-							<span>Iowa Seed BOL Audit Certified</span>
 						</div>
 
 						<!-- Sign Out Action -->

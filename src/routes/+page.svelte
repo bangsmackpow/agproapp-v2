@@ -35,7 +35,7 @@
 			</div>
 			<div class="flex items-center gap-2 text-xs font-semibold text-[var(--gh-fg-muted)]">
 				<div class="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-				<span>Verifying AgPro Secure Edge Session...</span>
+				<span>Loading AgPro Solutions...</span>
 			</div>
 		</div>
 	</div>
@@ -92,15 +92,19 @@
 		<!-- Footer -->
 		<footer class="border-t gh-border-muted bg-[var(--gh-canvas-subtle)] text-[11px] text-[var(--gh-fg-muted)] py-4 mt-8">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-				<div class="flex items-center gap-2">
-					<span class="font-bold text-[var(--gh-fg-default)]">AgPro Systems</span>
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="font-bold text-[var(--gh-fg-default)]">AgPro Solutions</span>
 					<span>&bull;</span>
-					<span>Iowa Precision Agronomy & Drone Application Operations</span>
+					<span>1200 E Howard St, Creston, IA 50801</span>
+					<span>&bull;</span>
+					<span>(641) 745-7392</span>
 				</div>
-				<div class="flex items-center gap-4 text-[10px] font-mono text-[var(--gh-fg-subtle)]">
-					<span>Cloudflare D1 & Workers</span>
-					<span>Hono Gateway</span>
-					<span>State of Iowa IDALS Seed Audits</span>
+				<div class="flex items-center gap-3 text-[10px] text-[var(--gh-fg-subtle)]">
+					<span>"Putting The Farmer Back In Control!"</span>
+					<span>&bull;</span>
+					<a href="https://agprosolu.com" target="_blank" rel="noopener noreferrer" class="hover:underline text-[var(--gh-fg-muted)]">
+						agprosolu.com
+					</a>
 				</div>
 			</div>
 		</footer>

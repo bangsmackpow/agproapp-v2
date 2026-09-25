@@ -58,16 +58,16 @@
 		<div>
 			<div class="flex items-center gap-2">
 				<span class="gh-badge gh-badge-success text-[10px] uppercase font-mono">
-					State of Iowa Ag System
+					AgPro Solutions &bull; Creston, IA
 				</span>
-				<span class="text-xs text-[var(--gh-fg-muted)]">Story, Hamilton, Boone & Surrounding Counties</span>
+				<span class="text-xs text-[var(--gh-fg-muted)]">Southwest Iowa &bull; Putting The Farmer Back In Control!</span>
 			</div>
 			<h2 class="text-xl font-bold text-[var(--gh-fg-default)] mt-1">
-				Precision Drone Fertilization, Seed & Ag Operations
+				Crop Protection, Channel® Seed & Custom Drone Application
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-1 max-w-2xl">
 				Logged in as <span class="font-semibold text-[var(--gh-fg-default)]">{auth.user?.name || 'Staff'}</span> (<span class="uppercase font-mono text-emerald-500 font-bold">{auth.role}</span>).
-				Unified cross-platform operations supporting field sales representatives on mobile tablets and office managers on desktop.
+				Family- and veteran-owned agricultural operations supporting local growers across Union, Adams, Clarke, Ringgold, Taylor, and Adair counties.
 			</p>
 		</div>
 

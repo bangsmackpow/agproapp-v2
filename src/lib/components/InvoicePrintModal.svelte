@@ -53,13 +53,13 @@
 						<div class="w-8 h-8 rounded bg-emerald-800 text-white flex items-center justify-center font-bold">
 							<Plane class="w-4 h-4" />
 						</div>
-						<h1 class="text-xl font-bold tracking-tight text-slate-900">AgPro Iowa LLC</h1>
+						<h1 class="text-xl font-bold tracking-tight text-slate-900">AgPro Solutions</h1>
 					</div>
 					<p class="text-xs text-slate-600 mt-1 font-medium">
-						Precision Agricultural Drone Fertilization & Seed Sales
+						Crop Protection, Channel® Seed & Custom Aerial/Ground Application
 					</p>
 					<p class="text-[10px] text-slate-500">
-						Midwest Ag Operations &bull; Story County, IA &bull; Tel: (515) 555-0100 &bull; contact@agpro.iowa
+						1200 E Howard St, Creston, IA 50801 &bull; Tel: (641) 745-7392 &bull; agprosolu@gmail.com &bull; agprosolu.com
 					</p>
 				</div>
 
@@ -189,8 +189,8 @@
 					<span>REMITTANCE ADVICE - PLEASE DETACH AND RETURN WITH PAYMENT</span>
 					<span>INVOICE #{invoice.invoiceNumber}</span>
 				</div>
-				<p>Make all checks payable to: <strong>AgPro Iowa LLC</strong> &bull; PO Box 412, Ames, IA 50010</p>
-				<p class="font-mono text-slate-500">ACH / Wire Routing: 073000228 &bull; Account: AgPro Primary Operating</p>
+				<p>Make all checks payable to: <strong>AgPro Solutions</strong> &bull; 1200 E Howard St, Creston, IA 50801 &bull; Tel: (641) 745-7392</p>
+				<p class="font-mono text-slate-500">In-house, JDF & Rabo Financing available &bull; Remittance inquiries: agprosolu@gmail.com</p>
 			</div>
 		</div>
 	</div>

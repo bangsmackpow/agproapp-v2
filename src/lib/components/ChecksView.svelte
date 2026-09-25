@@ -453,9 +453,9 @@
 						<!-- Bank & Check Header -->
 						<div class="flex justify-between items-start">
 							<div>
-								<p class="font-bold uppercase tracking-wider text-sm">AgPro Iowa LLC</p>
-								<p class="text-[11px] text-slate-600">Precision Aerial Drone Application</p>
-								<p class="text-[10px] text-slate-500">Story County, Iowa &bull; Tel: (515) 555-0100</p>
+								<p class="font-bold uppercase tracking-wider text-sm">AgPro Solutions</p>
+								<p class="text-[11px] text-slate-600">Crop Protection &bull; Channel® Seed &bull; Custom Application</p>
+								<p class="text-[10px] text-slate-500">1200 E Howard St, Creston, IA 50801 &bull; Tel: (641) 745-7392</p>
 							</div>
 							<div class="text-right">
 								<p class="font-mono font-bold text-base">CHECK NO: {activePreviewCheck.checkNumber}</p>
@@ -510,7 +510,7 @@
 					<!-- SECTION 2: VOUCHER STUB 1 -->
 					<div class="p-3 border border-slate-300 rounded bg-slate-50 text-[11px] space-y-1">
 						<div class="flex justify-between font-bold">
-							<span>AgPro Iowa LLC - Accounts Payable Voucher (Vendor Copy)</span>
+							<span>AgPro Solutions - Accounts Payable Voucher (Vendor Copy)</span>
 							<span>Check #{activePreviewCheck.checkNumber}</span>
 						</div>
 						<div class="grid grid-cols-4 gap-2 pt-1 text-slate-600 font-mono text-[10px]">
@@ -529,11 +529,11 @@
 					<!-- SECTION 3: VOUCHER STUB 2 -->
 					<div class="p-3 border border-slate-300 rounded bg-slate-50 text-[11px] space-y-1">
 						<div class="flex justify-between font-bold">
-							<span>AgPro Iowa LLC - General Ledger Record (Office Archive Copy)</span>
+							<span>AgPro Solutions - General Ledger Record (Office Archive Copy)</span>
 							<span>Check #{activePreviewCheck.checkNumber}</span>
 						</div>
 						<div class="grid grid-cols-4 gap-2 pt-1 text-slate-600 font-mono text-[10px]">
-							<div>Account: AgPro Primary Operating</div>
+							<div>Account: AgPro Solutions Operating</div>
 							<div>Audit Token: {activePreviewCheck.id}</div>
 							<div>Signer: Curtis Vance (Admin)</div>
 							<div class="text-right font-bold text-slate-900">${activePreviewCheck.amount.toFixed(2)}</div>
