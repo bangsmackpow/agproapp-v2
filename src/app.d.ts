@@ -25,6 +25,8 @@ declare global {
 				APP_NAME?: string;
 				APP_ENV?: string;
 				BETTER_AUTH_URL?: string;
+				RESEND_API_KEY?: string;
+				RESEND_FROM_EMAIL?: string;
 			};
 			context: {
 				waitUntil(promise: Promise<unknown>): void;

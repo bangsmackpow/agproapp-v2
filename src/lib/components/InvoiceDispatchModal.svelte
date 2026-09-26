@@ -70,10 +70,15 @@
 >
 	<div class="gh-card max-w-lg w-full p-6 space-y-4 shadow-2xl">
 		<div class="flex items-center justify-between pb-3 border-b gh-border-muted">
-			<h3 class="font-bold text-sm text-[var(--gh-fg-default)] flex items-center gap-2">
+			<div class="flex items-center gap-2">
 				<Send class="w-4 h-4 text-emerald-500" />
-				Electronic Distribution: Invoice {invoice.invoiceNumber}
-			</h3>
+				<h3 class="font-bold text-sm text-[var(--gh-fg-default)]">
+					Electronic Distribution: {invoice.invoiceNumber}
+				</h3>
+				<span class="gh-badge border-purple-500/40 text-purple-600 dark:text-purple-400 text-[9px] uppercase font-mono">
+					Resend API
+				</span>
+			</div>
 			<button type="button" onclick={onClose} class="p-1 rounded text-[var(--gh-fg-muted)] hover:bg-[var(--gh-canvas-inset)]">
 				<X class="w-4 h-4" />
 			</button>

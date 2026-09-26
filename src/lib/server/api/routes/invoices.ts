@@ -367,6 +367,139 @@ invoicesRouter.patch('/:id/status', async (c) => {
 	return c.json({ success: true, invoice: updated });
 });
 
+function renderInvoiceEmailHtml(inv: any, customMessage?: string, attachCompliance = true): string {
+	const hasSeedCompliance = inv.items?.some((it: any) => it.isIowaComplianceVerified);
+	const complianceLogs = inv.complianceLogs || [];
+
+	const itemsRows = (inv.items || [])
+		.map((it: any) => `
+			<tr style="border-bottom: 1px solid #e2e8f0;">
+				<td style="padding: 10px 8px; font-size: 13px;">
+					<strong>${it.product?.name || 'Custom Application & Agronomy Service'}</strong>
+					<div style="font-size: 11px; color: #64748b;">Tier: ${String(it.pricingTierApplied || 'cash_app').replace('_', ' ').toUpperCase()}</div>
+				</td>
+				<td style="padding: 10px 8px; text-align: center; font-size: 13px;">${it.quantity} ${it.unit}</td>
+				<td style="padding: 10px 8px; text-align: right; font-size: 13px;">$${it.unitSellingPrice.toFixed(2)}</td>
+				<td style="padding: 10px 8px; text-align: right; font-weight: bold; font-size: 13px;">$${it.totalPrice.toFixed(2)}</td>
+			</tr>
+		`).join('');
+
+	return `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Invoice ${inv.invoiceNumber} - AgPro Solutions</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a;">
+	<div style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+		<!-- Header -->
+		<div style="background-color: #065f46; color: #ffffff; padding: 24px 28px;">
+			<table style="width: 100%; border-collapse: collapse;">
+				<tr>
+					<td>
+						<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">AgPro Solutions</h1>
+						<p style="margin: 4px 0 0; font-size: 12px; opacity: 0.9; font-weight: 500;">Putting The Farmer Back In Control!</p>
+					</td>
+					<td style="text-align: right; vertical-align: top;">
+						<span style="display: inline-block; background-color: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+							Invoice ${inv.invoiceNumber}
+						</span>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div style="padding: 28px;">
+			<!-- Recipient & Intro -->
+			<p style="font-size: 14px; margin-top: 0;">Dear <strong>${inv.customer?.name || 'Valued Ag Customer'}</strong>,</p>
+			<p style="font-size: 13px; line-height: 1.5; color: #334155;">
+				Thank you for choosing AgPro Solutions. Your electronic invoice is detailed below for recent aerial drone applications, seed supply, or custom agronomy services.
+			</p>
+
+			${customMessage?.trim() ? `
+				<div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; font-size: 13px; color: #065f46;">
+					<strong>Agronomy Field Service Note:</strong><br>
+					${customMessage.trim()}
+				</div>
+			` : ''}
+
+			<!-- Summary Card -->
+			<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+				<table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+					<tr>
+						<td style="color: #64748b; padding: 4px 0;">Invoice Issue Date:</td>
+						<td style="text-align: right; font-weight: 600;">${inv.issueDate}</td>
+					</tr>
+					<tr>
+						<td style="color: #64748b; padding: 4px 0;">Payment Due Date:</td>
+						<td style="text-align: right; font-weight: 600;">${inv.dueDate}</td>
+					</tr>
+					${inv.acresTreated ? `
+						<tr>
+							<td style="color: #64748b; padding: 4px 0;">Aerial Drone Coverage:</td>
+							<td style="text-align: right; font-weight: 600;">${inv.acresTreated} acres</td>
+						</tr>
+					` : ''}
+					<tr style="border-top: 1px solid #cbd5e1;">
+						<td style="padding: 10px 0 4px; font-weight: bold; font-size: 15px;">Total Amount Due:</td>
+						<td style="padding: 10px 0 4px; text-align: right; font-weight: 800; font-size: 18px; color: #047857;">$${inv.totalAmount.toFixed(2)}</td>
+					</tr>
+				</table>
+			</div>
+
+			<!-- Line Items Table -->
+			<h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin: 24px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+				Itemized Services & Products
+			</h3>
+			<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+				<thead>
+					<tr style="background-color: #f1f5f9; text-transform: uppercase; font-size: 11px; color: #64748b; text-align: left;">
+						<th style="padding: 8px;">Product / Service</th>
+						<th style="padding: 8px; text-align: center;">Qty</th>
+						<th style="padding: 8px; text-align: right;">Unit Price</th>
+						<th style="padding: 8px; text-align: right;">Extended</th>
+					</tr>
+				</thead>
+				<tbody>
+					${itemsRows}
+				</tbody>
+			</table>
+
+			<!-- Iowa Seed Regulatory Audit Compliance -->
+			${hasSeedCompliance && attachCompliance ? `
+				<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; margin: 20px 0; font-size: 12px; color: #065f46;">
+					<strong style="display: block; margin-bottom: 6px; font-size: 13px;">State of Iowa Department of Agriculture (IDALS) Seed Audit Certification</strong>
+					<p style="margin: 0 0 8px; line-height: 1.4;">
+						Commercial seed distribution validated pursuant to Iowa Code Chapter 199. Verified tokens ensure full traceability:
+					</p>
+					${complianceLogs.map((l: any) => `
+						<div style="font-family: monospace; font-size: 11px; background: rgba(255,255,255,0.7); padding: 5px 8px; border-radius: 4px; margin-bottom: 4px;">
+							<strong>BOL/CMR #:</strong> ${l.bolNumber} &bull; <strong>Order #:</strong> ${l.orderNumber} &bull; ${l.regulatedProduct}
+						</div>
+					`).join('')}
+				</div>
+			` : ''}
+
+			<!-- Tax Exemption Notice -->
+			<p style="font-size: 11px; color: #64748b; line-height: 1.4; margin: 16px 0;">
+				<em>Iowa Tax Exemption Notice:</em> Commercial fertilizer, agricultural chemicals, and custom aerial application services are exempt from Iowa State Sales and Use Tax under Iowa Code § 423.3.
+			</p>
+
+			<!-- Remittance & Footer -->
+			<div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px; font-size: 12px; color: #64748b; line-height: 1.5;">
+				<p style="margin: 0 0 4px;"><strong>Payment Remittance:</strong></p>
+				<p style="margin: 0;">AgPro Solutions &bull; 1200 E Howard St, Creston, IA 50801</p>
+				<p style="margin: 0;">Tel: (641) 745-7392 &bull; Email: agprosolu@gmail.com</p>
+				<p style="margin: 4px 0 0; font-size: 11px; color: #94a3b8;">JDF & Rabo Financing terms accepted. Certified Bayer Channel SeedPro.</p>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
+	`.trim();
+}
+
 // Preview electronic dispatch payload & rendered email
 invoicesRouter.get('/:id/dispatch-preview', async (c) => {
 	const id = c.req.param('id');
@@ -388,38 +521,8 @@ invoicesRouter.get('/:id/dispatch-preview', async (c) => {
 	const recipientName = inv.customer?.name || 'Valued Ag Customer';
 	const hasSeedCompliance = inv.items.some((it) => it.isIowaComplianceVerified);
 
-	const subject = `Invoice ${inv.invoiceNumber} - AgPro Precision Drone Application & Seed Sales`;
-	const htmlBody = `
-		<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-			<div style="background-color: #065f46; color: #ffffff; padding: 20px; border-radius: 6px 6px 0 0;">
-				<h2 style="margin: 0;">AgPro Precision Agriculture</h2>
-				<p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">Aerial Drone Application & Agronomy - Iowa</p>
-			</div>
-			<div style="border: 1px solid #cbd5e1; border-top: none; padding: 20px; border-radius: 0 0 6px 6px;">
-				<p>Dear <strong>${recipientName}</strong>,</p>
-				<p>Your electronic invoice <strong>${inv.invoiceNumber}</strong> has been prepared for recent field agronomy services.</p>
-				
-				<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 4px; margin: 16px 0;">
-					<table style="width: 100%; font-size: 13px;">
-						<tr><td><strong>Total Due:</strong></td><td style="text-align: right; font-weight: bold; color: #047857;">$${inv.totalAmount.toFixed(2)}</td></tr>
-						<tr><td><strong>Issue Date:</strong></td><td style="text-align: right;">${inv.issueDate}</td></tr>
-						<tr><td><strong>Due Date:</strong></td><td style="text-align: right;">${inv.dueDate}</td></tr>
-						${inv.acresTreated ? `<tr><td><strong>Drone Coverage:</strong></td><td style="text-align: right;">${inv.acresTreated} acres</td></tr>` : ''}
-					</table>
-				</div>
-
-				${hasSeedCompliance ? `
-					<div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px; border-radius: 4px; font-size: 12px; margin-bottom: 16px;">
-						<strong>State of Iowa Seed Regulatory Audit Compliance:</strong> Attached with verified Channel Straight BOL and Order numbers satisfying IDALS commercial seed verification.
-					</div>
-				` : ''}
-
-				<p style="font-size: 12px; color: #64748b;">
-					Thank you for your business. For billing questions or field service dispatch, contact AgPro Iowa at (515) 555-0100.
-				</p>
-			</div>
-		</div>
-	`;
+	const subject = `Invoice ${inv.invoiceNumber} - AgPro Solutions`;
+	const htmlBody = renderInvoiceEmailHtml(inv, '', true);
 
 	return c.json({
 		invoiceNumber: inv.invoiceNumber,
@@ -436,7 +539,7 @@ invoicesRouter.get('/:id/dispatch-preview', async (c) => {
 	});
 });
 
-// Electronic dispatch endpoint (Dispatches electronic invoice and transitions status to 'sent')
+// Electronic dispatch endpoint via Resend
 invoicesRouter.post('/:id/dispatch', async (c) => {
 	const id = c.req.param('id');
 	const user = c.get('user');
@@ -447,12 +550,75 @@ invoicesRouter.post('/:id/dispatch', async (c) => {
 
 	const inv = await db.query.invoices.findFirst({
 		where: eq(invoices.id, id),
-		with: { customer: true, items: true }
+		with: {
+			customer: true,
+			items: { with: { product: true } },
+			complianceLogs: true
+		}
 	});
 
 	if (!inv) return c.json({ error: 'Invoice not found' }, 404);
 
 	const recipientEmail = body.recipientEmail || inv.customer?.email || 'grower@farm.iowa';
+	const customMessage = body.customMessage || '';
+	const attachCompliance = body.attachCompliance !== false;
+
+	const emailHtml = renderInvoiceEmailHtml(inv, customMessage, attachCompliance);
+	const emailSubject = `Invoice ${inv.invoiceNumber} - AgPro Solutions`;
+
+	// Resend Transactional Email Dispatch Integration
+	let resendId: string | null = null;
+	let deliveryMode: 'resend_live' | 'simulated' = 'simulated';
+
+	const resendApiKey = c.env?.RESEND_API_KEY;
+
+	if (resendApiKey) {
+		const fromEmail = c.env?.RESEND_FROM_EMAIL || 'AgPro Solutions <onboarding@resend.dev>';
+		try {
+			const resendRes = await fetch('https://api.resend.com/emails', {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${resendApiKey}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					from: fromEmail,
+					to: [recipientEmail],
+					subject: emailSubject,
+					html: emailHtml
+				})
+			});
+
+			if (!resendRes.ok) {
+				const errorText = await resendRes.text();
+				console.error('Resend API HTTP error:', resendRes.status, errorText);
+				return c.json(
+					{
+						error: 'Resend API rejected email dispatch',
+						details: errorText,
+						statusCode: resendRes.status
+					},
+					502
+				);
+			}
+
+			const resendData = (await resendRes.json()) as { id?: string };
+			resendId = resendData.id || null;
+			deliveryMode = 'resend_live';
+		} catch (networkErr: any) {
+			console.error('Network failure connecting to Resend:', networkErr);
+			return c.json(
+				{
+					error: 'Failed to contact Resend mail servers',
+					details: networkErr?.message
+				},
+				502
+			);
+		}
+	} else {
+		resendId = `sim_${crypto.randomUUID().slice(0, 8)}`;
+		console.info(`[RESEND SIMULATION] Dispatched ${inv.invoiceNumber} to ${recipientEmail}`);
+	}
 
 	// Transition status to sent
 	await db.update(invoices).set({ status: 'sent', updatedAt: new Date() }).where(eq(invoices.id, id));
@@ -463,7 +629,7 @@ invoicesRouter.post('/:id/dispatch', async (c) => {
 			id: `aud_${crypto.randomUUID().slice(0, 8)}`,
 			userId: user?.id,
 			userEmail: user?.email,
-			action: 'INVOICE_ELECTRONIC_DISPATCH',
+			action: 'INVOICE_RESEND_DISPATCH',
 			entity: 'invoice',
 			entityId: inv.id,
 			ipAddress: c.req.header('cf-connecting-ip') || 'internal',
@@ -472,16 +638,25 @@ invoicesRouter.post('/:id/dispatch', async (c) => {
 				invoiceNumber: inv.invoiceNumber,
 				dispatchedTo: recipientEmail,
 				totalAmount: inv.totalAmount,
-				attachComplianceCertificate: !!body.attachCompliance
+				resendId,
+				deliveryMode,
+				attachComplianceCertificate: attachCompliance
 			})
 		});
 	} catch (e) {
 		console.warn('Audit log write error:', e);
 	}
 
+	const message =
+		deliveryMode === 'resend_live'
+			? `Invoice ${inv.invoiceNumber} delivered to ${recipientEmail} via Resend (${resendId})`
+			: `Invoice ${inv.invoiceNumber} dispatched to ${recipientEmail} (Simulated: configure RESEND_API_KEY in Cloudflare for live delivery)`;
+
 	return c.json({
 		success: true,
-		message: `Invoice ${inv.invoiceNumber} successfully dispatched to ${recipientEmail}`,
+		message,
+		deliveryMode,
+		resendId,
 		dispatchedTo: recipientEmail,
 		invoiceNumber: inv.invoiceNumber,
 		status: 'sent',

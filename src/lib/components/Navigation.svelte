@@ -10,7 +10,8 @@
 		CreditCard,
 		ScrollText,
 		Lock,
-		X
+		X,
+		UserCheck
 	} from 'lucide-svelte';
 
 	let { activeTab, onSelectTab, mobileOpen, onCloseMobile } = $props<{
@@ -36,6 +37,7 @@
 		{ id: 'customers', label: 'CRM & Accounts', icon: Users },
 		{ id: 'compliance', label: 'Iowa Seed Audits', icon: ShieldCheck, badge: 'IDALS' },
 		{ id: 'checks', label: 'Checkwriting', icon: CreditCard, requiredRole: 'admin', badge: 'Admin' },
+		{ id: 'staff', label: 'Staff & Roles', icon: UserCheck, requiredRole: 'admin', badge: 'Admin' },
 		{ id: 'audit-logs', label: 'Security Logs', icon: ScrollText, requiredRole: 'admin' }
 	];
 

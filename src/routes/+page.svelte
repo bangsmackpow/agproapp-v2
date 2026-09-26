@@ -10,6 +10,7 @@
 	import CustomersView from '$lib/components/CustomersView.svelte';
 	import ComplianceView from '$lib/components/ComplianceView.svelte';
 	import ChecksView from '$lib/components/ChecksView.svelte';
+	import StaffManagementView from '$lib/components/StaffManagementView.svelte';
 	import AuditLogsView from '$lib/components/AuditLogsView.svelte';
 	import ProductModal from '$lib/components/ProductModal.svelte';
 	import LoginView from '$lib/components/LoginView.svelte';
@@ -84,6 +85,8 @@
 				<ComplianceView />
 			{:else if activeTab === 'checks'}
 				<ChecksView />
+			{:else if activeTab === 'staff'}
+				<StaffManagementView />
 			{:else if activeTab === 'audit-logs'}
 				<AuditLogsView />
 			{/if}

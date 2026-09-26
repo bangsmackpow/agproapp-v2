@@ -18,6 +18,8 @@ export type AppBindings = {
 	APP_ENV?: string;
 	BETTER_AUTH_URL?: string;
 	IOWA_SEED_AUDIT_ENABLED?: string;
+	RESEND_API_KEY?: string;
+	RESEND_FROM_EMAIL?: string;
 };
 
 export type AppVariables = {

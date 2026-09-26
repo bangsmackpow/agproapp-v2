@@ -101,6 +101,56 @@ $env:CLOUDFLARE_ACCOUNT_ID="0e528c886015cce349076fb7db222a88"; pnpm wrangler d1 
 
 ---
 
+### Staff Management & Password Rotation (`DONE`)
+* `src/lib/server/api/routes/users.ts`: Admin-only staff account lifecycle router (list staff, create staff, edit roles, toggle active/suspended status, and reset passwords).
+* `ChangePasswordModal.svelte`: Self-service password rotation for any authenticated user via edge PBKDF2 hash update.
+* `StaffManagementView.svelte`: Dedicated Admin management console with RBAC policy documentation, staff directory, and action dialogs.
+
+### Cloudflare R2 Document Archival (`DONE`)
+* `src/lib/server/api/routes/ingestion.ts`: Full integration with Cloudflare R2 (`DOCUMENTS` binding -> `agpro-documents`). Incoming invoices and Channel seed BOLs are streamed directly into R2 object storage with metadata indexing.
+* Endpoints: `POST /api/ingestion/process` (multipart upload & storage), `GET /api/ingestion/documents/:id/download` (R2 stream download), and `GET /api/ingestion/documents/:id/preview` (in-browser display).
+* `IngestionView.svelte`: Drag-and-drop file upload zone, R2 target indicator, and an interactive R2 ingestion audit archive table.
+
+### Resend Electronic Email Dispatch (`DONE`)
+* `src/lib/server/api/routes/invoices.ts`: Integrated with Resend API (`POST /api/invoices/:id/dispatch`) supporting `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
+* Renders professional AgPro Solutions branded email with Creston IA identity, slogan, itemized services, IDALS seed compliance audit certification, and Iowa sales tax exemption (§ 423.3).
+* `InvoiceDispatchModal.svelte`: UI dispatch modal with grower email lookup, optional agronomy service notes, and Resend delivery feedback.
+
+---
+
+## 4. Git & Cloudflare Infrastructure Mapping
+
+* **GitHub Repository**: [`https://github.com/bangsmackpow/agproapp-v2.git`](https://github.com/bangsmackpow/agproapp-v2.git) (Branch: `main`)
+* **Cloudflare Account ID**: `0e528c886015cce349076fb7db222a88` (`curtislamasters@gmail.com`)
+* **Live Pages Deployment**: `https://agproapp-v2.pages.dev`
+* **D1 Database Binding**: `DB` &rarr; `agpro-v2-prod` (UUID: `f5315046-250a-4f80-9d89-91fed09ce8a7`)
+* **R2 Bucket Binding**: `DOCUMENTS` &rarr; `agpro-documents`
+* **Wrangler Pages Rule**: Do **not** include `account_id` or `[observability]` in `wrangler.toml` (Cloudflare Pages CI/CD rejects them).
+
+---
+
+## 5. Verification Commands (Quality Gates)
+
+Run these commands before pushing any code changes:
+
+```powershell
+# 1. Run all 20 automated unit tests
+pnpm test
+
+# 2. Run TypeScript & Svelte compiler checks (must be 0 errors, 0 warnings)
+pnpm check
+
+# 3. Compile edge production bundle
+pnpm build
+```
+
+When applying D1 migrations remotely:
+```powershell
+$env:CLOUDFLARE_ACCOUNT_ID="0e528c886015cce349076fb7db222a88"; pnpm wrangler d1 migrations apply agpro-v2-prod --remote
+```
+
+---
+
 ## 6. Remaining Items to Address Before Production Launch
 
 Before cutting over as the daily operating system for AgPro Solutions, complete these items:
@@ -108,9 +158,7 @@ Before cutting over as the daily operating system for AgPro Solutions, complete 
 | # | Item | Category | Description | Priority |
 |---|---|---|---|---|
 | **1** | **Custom Production Domain** | DevOps | Bind custom domain (e.g. `app.agprosolu.com` or `portal.agprosolu.com`) to Cloudflare Pages in Cloudflare Dashboard &rarr; Pages &rarr; Custom Domains. | **High** |
-| **2** | **Password Rotation & Staff Management UI** | Security | Provide an Admin UI tab to invite new staff, edit roles, and allow users to change their temporary passwords (`AgPro2026!*`) without direct SQL queries. | **High** |
-| **3** | **R2 Object Upload Integration** | Storage | Connect `IngestionView.svelte` upload handler to stream incoming BOL/invoice PDFs and JPGs directly to the `DOCUMENTS` R2 bucket for permanent audit storage. | **Medium** |
-| **4** | **Electronic Email Dispatch** | Integrations | Connect `POST /api/invoices/:id/dispatch` to a transactional email provider (SendGrid, Postmark, Resend, or Cloudflare Email Routing) to email invoice PDFs directly to growers. | **Medium** |
-| **5** | **Physical Check Stock Alignment Test** | Hardware | Perform physical test prints on office check hardware with blank 3-part check stock to verify margins and perforation alignment (tunable via CSS variables in `src/app.css`). | **Medium** |
-| **6** | **Historical Grower & Seed Data Migration** | Data | Import existing customer/grower rosters, field boundaries, and past Channel seed BOL records from legacy spreadsheets or accounting records into D1. | **Low** |
-| **7** | **Off-line / PWA Field Support** | Mobile | Add service worker caching so field reps in rural Iowa with spotty cellular coverage can compose draft invoices and browse read-only inventory offline. | **Low** |
+| **2** | **Resend Production Key in Cloudflare** | Configuration | Add `RESEND_API_KEY` (and optional `RESEND_FROM_EMAIL`) in Cloudflare Dashboard &rarr; Pages &rarr; `agpro-v2` &rarr; Settings &rarr; Environment variables. | **High** |
+| **3** | **Physical Check Stock Alignment Test** | Hardware | Perform physical test prints on office check hardware with blank 3-part check stock to verify margins and perforation alignment (tunable via CSS variables in `src/app.css`). | **Medium** |
+| **4** | **Historical Grower & Seed Data Migration** | Data | Import existing customer/grower rosters, field boundaries, and past Channel seed BOL records from legacy spreadsheets or accounting records into D1. | **Low** |
+| **5** | **Off-line / PWA Field Support** | Mobile | Add service worker caching so field reps in rural Iowa with spotty cellular coverage can compose draft invoices and browse read-only inventory offline. | **Low** |

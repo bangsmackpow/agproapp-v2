@@ -14,13 +14,16 @@
 		Plane,
 		LogOut,
 		ShieldCheck,
-		Lock
+		Lock,
+		KeyRound
 	} from 'lucide-svelte';
+	import ChangePasswordModal from './ChangePasswordModal.svelte';
 
 	let { onToggleMobileNav } = $props<{ onToggleMobileNav?: () => void }>();
 
 	let userMenuOpen = $state(false);
 	let themeMenuOpen = $state(false);
+	let showPasswordModal = $state(false);
 
 	function switchTheme(mode: ThemeMode) {
 		theme.setTheme(mode);
@@ -150,12 +153,27 @@
 							</div>
 						</div>
 
+						<!-- Account Actions -->
+						<div class="p-1.5 space-y-0.5 border-b gh-border-muted">
+							<button
+								type="button"
+								onclick={() => {
+									userMenuOpen = false;
+									showPasswordModal = true;
+								}}
+								class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center gap-2 text-[var(--gh-fg-default)] hover:bg-[var(--gh-canvas-inset)] font-medium transition-colors"
+							>
+								<KeyRound class="w-3.5 h-3.5 text-emerald-500" />
+								<span>Change Password</span>
+							</button>
+						</div>
+
 						<!-- Sign Out Action -->
 						<div class="p-1.5">
 							<button
 								type="button"
 								onclick={handleLogout}
-								class="w-full text-left px-2.5 py-2 rounded-md flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 font-semibold transition-colors"
+								class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 font-semibold transition-colors"
 							>
 								<LogOut class="w-3.5 h-3.5" />
 								<span>Sign Out of Session</span>
@@ -164,6 +182,10 @@
 					</div>
 				{/if}
 			</div>
+
+			{#if showPasswordModal}
+				<ChangePasswordModal onClose={() => (showPasswordModal = false)} />
+			{/if}
 
 			<!-- Theme Switcher (Light / Dark / System) -->
 			<div class="relative">

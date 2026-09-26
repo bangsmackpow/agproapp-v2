@@ -40,8 +40,8 @@ ingestionRouter.get('/logs', async (c) => {
 	return c.json({ logs });
 });
 
-// Main Ingestion & Auto-Import Endpoint
-// Accepts JSON or multipart form data containing raw text, OCR string, or simulated document
+// Main Ingestion & Auto-Import Endpoint with Cloudflare R2 Bucket Persistence
+// Accepts JSON or multipart/form-data containing PDF, image, CSV, or text
 ingestionRouter.post('/process', async (c) => {
 	const user = c.get('user');
 	if (!c.env?.DB) return c.json({ error: 'DB not available' }, 500);
@@ -49,7 +49,9 @@ ingestionRouter.post('/process', async (c) => {
 
 	let fileName = 'payload.txt';
 	let fileType = 'text/plain';
+	let fileSize: number | undefined;
 	let rawPayload = '';
+	let fileBuffer: ArrayBuffer | null = null;
 	let sourceHint: IngestionSource | undefined;
 	let targetCustomerId: string | undefined;
 	let autoCommitToInventory = true;
@@ -59,7 +61,9 @@ ingestionRouter.post('/process', async (c) => {
 	if (contentType.includes('application/json')) {
 		const json = await c.req.json();
 		rawPayload = json.payloadRaw || json.text || '';
-		fileName = json.fileName || 'document_upload.json';
+		fileName = json.fileName || 'document_upload.txt';
+		fileType = 'text/plain';
+		fileSize = new TextEncoder().encode(rawPayload).length;
 		sourceHint = json.sourceHint;
 		targetCustomerId = json.customerId;
 		if (json.autoCommit !== undefined) autoCommitToInventory = !!json.autoCommit;
@@ -73,14 +77,32 @@ ingestionRouter.post('/process', async (c) => {
 
 		if (file) {
 			fileName = file.name;
-			fileType = file.type;
-			rawPayload = await file.text();
+			fileType = file.type || 'application/octet-stream';
+			fileSize = file.size;
+
+			if (
+				file.type.includes('text') ||
+				file.name.endsWith('.txt') ||
+				file.name.endsWith('.csv') ||
+				file.name.endsWith('.json')
+			) {
+				rawPayload = await file.text();
+				fileBuffer = await file.arrayBuffer();
+			} else {
+				// Binary documents (PDF, JPG, PNG, TIFF)
+				fileBuffer = await file.arrayBuffer();
+				const textSnippet = (formData.get('payloadRaw') as string) || '';
+				rawPayload = textSnippet.trim()
+					? textSnippet
+					: `[BINARY DOCUMENT: ${file.name} (${file.type || 'application/octet-stream'}, ${(file.size / 1024).toFixed(1)} KB)]`;
+			}
 		} else {
 			rawPayload = (formData.get('payloadRaw') as string) || '';
+			fileSize = new TextEncoder().encode(rawPayload).length;
 		}
 	}
 
-	if (!rawPayload.trim()) {
+	if (!rawPayload.trim() && !fileBuffer) {
 		return c.json({ error: 'Empty payload or document text provided' }, 400);
 	}
 
@@ -113,6 +135,7 @@ ingestionRouter.post('/process', async (c) => {
 		source: parseResult.source,
 		fileName,
 		fileType,
+		fileSize: fileSize || 0,
 		payloadRaw: rawPayload.slice(0, 10000), // Cap raw snippet in log
 		extractedAttributes: JSON.stringify(parseResult.items),
 		extractedBolNumber: parseResult.iowaComplianceTokens?.bolNumber,
@@ -123,7 +146,33 @@ ingestionRouter.post('/process', async (c) => {
 		uploadedByUserId: user.id
 	});
 
-	// 4. If Channel BOL contains Iowa compliance tokens, create/update Iowa Compliance Log
+	// 4. Store Document Payload into Cloudflare R2 Bucket (DOCUMENTS -> agpro-documents)
+	const storageKey = `documents/${logId}_${encodeURIComponent(fileName)}`;
+	let r2Stored = false;
+
+	if (c.env?.DOCUMENTS) {
+		try {
+			const bodyData: ArrayBuffer | Uint8Array = fileBuffer || new TextEncoder().encode(rawPayload);
+			await c.env.DOCUMENTS.put(storageKey, bodyData, {
+				httpMetadata: {
+					contentType: fileType || 'application/octet-stream'
+				},
+				customMetadata: {
+					logId,
+					fileName,
+					vendorName: parseResult.vendorName,
+					source: parseResult.source,
+					uploadedByUserId: user.id,
+					bolNumber: parseResult.iowaComplianceTokens?.bolNumber || ''
+				}
+			});
+			r2Stored = true;
+		} catch (r2Err) {
+			console.warn('Cloudflare R2 document storage write error:', r2Err);
+		}
+	}
+
+	// 5. If Channel BOL contains Iowa compliance tokens, create/update Iowa Compliance Log
 	if (parseResult.iowaComplianceTokens && targetCustomerId) {
 		const compId = `log_ia_${crypto.randomUUID().slice(0, 8)}`;
 		await db.insert(iowaComplianceLogs).values({
@@ -138,11 +187,11 @@ ingestionRouter.post('/process', async (c) => {
 			unit: parseResult.items[0]?.unit || 'unit',
 			verifiedByUserId: user.id,
 			complianceStatus: 'verified',
-			auditNotes: `Auto-indexed from Channel Straight BOL (${fileName}). Verified for Iowa seed audit.`
+			auditNotes: `Auto-indexed from Channel Straight BOL (${fileName}). Stored in R2 (${storageKey}).`
 		});
 	}
 
-	// 5. Automatically update or insert inventory products if autoCommit is enabled
+	// 6. Automatically update or insert inventory products if autoCommit is enabled
 	const importedProducts = [];
 	if (autoCommitToInventory) {
 		for (const item of parseResult.items) {
@@ -227,8 +276,100 @@ ingestionRouter.post('/process', async (c) => {
 	return c.json({
 		success: true,
 		logId,
+		fileName,
+		r2Stored,
+		storageKey,
+		bucketName: 'agpro-documents',
 		parseResult,
 		importedProducts,
 		iowaComplianceTokens: parseResult.iowaComplianceTokens || null
+	});
+});
+
+// GET /api/ingestion/documents/:id/download - Stream/download original document from R2
+ingestionRouter.get('/documents/:id/download', async (c) => {
+	const id = c.req.param('id');
+	if (!c.env?.DB) return c.json({ error: 'DB not available' }, 500);
+	const db = getDb(c.env.DB);
+
+	const log = await db.query.documentIngestionLogs.findFirst({
+		where: eq(documentIngestionLogs.id, id)
+	});
+
+	if (!log) {
+		return c.json({ error: 'Document ingestion record not found' }, 404);
+	}
+
+	const storageKey = `documents/${log.id}_${encodeURIComponent(log.fileName)}`;
+
+	// Attempt retrieval from Cloudflare R2 bucket
+	if (c.env?.DOCUMENTS) {
+		try {
+			const object = await c.env.DOCUMENTS.get(storageKey);
+			if (object) {
+				return new Response(object.body, {
+					status: 200,
+					headers: {
+						'Content-Type': object.httpMetadata?.contentType || log.fileType || 'application/octet-stream',
+						'Content-Disposition': `attachment; filename="${encodeURIComponent(log.fileName)}"`,
+						'Content-Length': String(object.size),
+						'ETag': object.httpEtag
+					}
+				});
+			}
+		} catch (r2Err) {
+			console.warn('R2 retrieval error:', r2Err);
+		}
+	}
+
+	// Fallback to raw text payload if R2 object unavailable or simulated in dev
+	return new Response(log.payloadRaw || 'Document content unavailable', {
+		status: 200,
+		headers: {
+			'Content-Type': log.fileType || 'text/plain',
+			'Content-Disposition': `attachment; filename="${log.fileName}"`
+		}
+	});
+});
+
+// GET /api/ingestion/documents/:id/preview - In-browser preview of document from R2
+ingestionRouter.get('/documents/:id/preview', async (c) => {
+	const id = c.req.param('id');
+	if (!c.env?.DB) return c.json({ error: 'DB not available' }, 500);
+	const db = getDb(c.env.DB);
+
+	const log = await db.query.documentIngestionLogs.findFirst({
+		where: eq(documentIngestionLogs.id, id)
+	});
+
+	if (!log) {
+		return c.json({ error: 'Document record not found' }, 404);
+	}
+
+	const storageKey = `documents/${log.id}_${encodeURIComponent(log.fileName)}`;
+
+	if (c.env?.DOCUMENTS) {
+		try {
+			const object = await c.env.DOCUMENTS.get(storageKey);
+			if (object) {
+				return new Response(object.body, {
+					status: 200,
+					headers: {
+						'Content-Type': object.httpMetadata?.contentType || log.fileType || 'application/octet-stream',
+						'Content-Disposition': 'inline'
+					}
+				});
+			}
+		} catch (e) {
+			console.warn('R2 preview error:', e);
+		}
+	}
+
+	return new Response(log.payloadRaw || 'No preview available', {
+		status: 200,
+		headers: {
+			'Content-Type': log.fileType || 'text/plain; charset=utf-8',
+			'Content-Disposition': 'inline'
+		}
 	});
 });

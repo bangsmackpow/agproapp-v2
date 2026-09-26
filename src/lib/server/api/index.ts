@@ -17,6 +17,7 @@ import { invoicesRouter } from './routes/invoices';
 import { checksRouter } from './routes/checks';
 import { complianceRouter } from './routes/compliance';
 import { systemLogsRouter } from './routes/system-logs';
+import { usersRouter } from './routes/users';
 
 export const api = new Hono<{
 	Bindings: AppBindings;
@@ -158,6 +159,7 @@ api.route('/invoices', invoicesRouter);
 api.route('/checks', checksRouter);
 api.route('/compliance', complianceRouter);
 api.route('/system-logs', systemLogsRouter);
+api.route('/users', usersRouter);
 
 // Global Error Handling
 api.onError((err, c) => {
