@@ -251,17 +251,11 @@ DATE: 04/20/2026
 </script>
 
 <div class="space-y-6">
-	<!-- Page Header -->
-	<div class="pb-4 border-b gh-border-muted flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-		<div>
-			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
-				<UploadCloud class="w-5 h-5 text-emerald-500" />
-				Document Ingestion & Cloudflare R2 Archival
-			</h2>
-			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Upload incoming vendor invoices and Channel seed BOLs directly to Cloudflare R2 (<code>agpro-documents</code>) for permanent audit storage.
-			</p>
-		</div>
+	<!-- Controls Bar -->
+	<div class="pb-3 border-b gh-border-muted flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+		<p class="text-xs text-[var(--gh-fg-muted)]">
+			Upload vendor invoices or Channel seed BOLs to automatically extract line items and update inventory.
+		</p>
 
 		<div class="flex items-center gap-3">
 			<label class="text-xs text-[var(--gh-fg-muted)] flex items-center gap-2 cursor-pointer">

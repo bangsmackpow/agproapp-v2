@@ -68,86 +68,19 @@ All 4 initial development phases, production authentication lockdown, and brandi
 
 ---
 
-## 4. Git & Cloudflare Infrastructure Mapping
-
-* **GitHub Repository**: [`https://github.com/bangsmackpow/agproapp-v2.git`](https://github.com/bangsmackpow/agproapp-v2.git) (Branch: `main`)
-* **Cloudflare Account ID**: `0e528c886015cce349076fb7db222a88` (`curtislamasters@gmail.com`)
-* **Live Pages Deployment**: `https://agproapp-v2.pages.dev`
-* **D1 Database Binding**: `DB` &rarr; `agpro-v2-prod` (UUID: `f5315046-250a-4f80-9d89-91fed09ce8a7`)
-* **R2 Bucket Binding**: `DOCUMENTS` &rarr; `agpro-documents`
-* **Wrangler Pages Rule**: Do **not** include `account_id` or `[observability]` in `wrangler.toml` (Cloudflare Pages CI/CD rejects them).
-
----
-
-## 5. Verification Commands (Quality Gates)
-
-Run these commands before pushing any code changes:
-
-```powershell
-# 1. Run all 15 automated unit tests
-pnpm test
-
-# 2. Run TypeScript & Svelte compiler checks (must be 0 errors, 0 warnings)
-pnpm check
-
-# 3. Compile edge production bundle
-pnpm build
-```
-
-When applying D1 migrations remotely:
-```powershell
-$env:CLOUDFLARE_ACCOUNT_ID="0e528c886015cce349076fb7db222a88"; pnpm wrangler d1 migrations apply agpro-v2-prod --remote
-```
-
----
-
-### Staff Management & Password Rotation (`DONE`)
+### Pre-Production Features: Staff Management, R2 Archival & Resend Dispatch (`DONE`)
 * `src/lib/server/api/routes/users.ts`: Admin-only staff account lifecycle router (list staff, create staff, edit roles, toggle active/suspended status, and reset passwords).
 * `ChangePasswordModal.svelte`: Self-service password rotation for any authenticated user via edge PBKDF2 hash update.
 * `StaffManagementView.svelte`: Dedicated Admin management console with RBAC policy documentation, staff directory, and action dialogs.
-
-### Cloudflare R2 Document Archival (`DONE`)
 * `src/lib/server/api/routes/ingestion.ts`: Full integration with Cloudflare R2 (`DOCUMENTS` binding -> `agpro-documents`). Incoming invoices and Channel seed BOLs are streamed directly into R2 object storage with metadata indexing.
-* Endpoints: `POST /api/ingestion/process` (multipart upload & storage), `GET /api/ingestion/documents/:id/download` (R2 stream download), and `GET /api/ingestion/documents/:id/preview` (in-browser display).
-* `IngestionView.svelte`: Drag-and-drop file upload zone, R2 target indicator, and an interactive R2 ingestion audit archive table.
+* `src/lib/server/api/routes/invoices.ts`: Integrated with Resend API (`POST /api/invoices/:id/dispatch`) supporting `RESEND_API_KEY` and `RESEND_FROM_EMAIL` with branded Creston IA layout, IDALS compliance notice, and Iowa sales tax exemption (§ 423.3).
 
-### Resend Electronic Email Dispatch (`DONE`)
-* `src/lib/server/api/routes/invoices.ts`: Integrated with Resend API (`POST /api/invoices/:id/dispatch`) supporting `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
-* Renders professional AgPro Solutions branded email with Creston IA identity, slogan, itemized services, IDALS seed compliance audit certification, and Iowa sales tax exemption (§ 423.3).
-* `InvoiceDispatchModal.svelte`: UI dispatch modal with grower email lookup, optional agronomy service notes, and Resend delivery feedback.
-
----
-
-## 4. Git & Cloudflare Infrastructure Mapping
-
-* **GitHub Repository**: [`https://github.com/bangsmackpow/agproapp-v2.git`](https://github.com/bangsmackpow/agproapp-v2.git) (Branch: `main`)
-* **Cloudflare Account ID**: `0e528c886015cce349076fb7db222a88` (`curtislamasters@gmail.com`)
-* **Live Pages Deployment**: `https://agproapp-v2.pages.dev`
-* **D1 Database Binding**: `DB` &rarr; `agpro-v2-prod` (UUID: `f5315046-250a-4f80-9d89-91fed09ce8a7`)
-* **R2 Bucket Binding**: `DOCUMENTS` &rarr; `agpro-documents`
-* **Wrangler Pages Rule**: Do **not** include `account_id` or `[observability]` in `wrangler.toml` (Cloudflare Pages CI/CD rejects them).
-
----
-
-## 5. Verification Commands (Quality Gates)
-
-Run these commands before pushing any code changes:
-
-```powershell
-# 1. Run all 20 automated unit tests
-pnpm test
-
-# 2. Run TypeScript & Svelte compiler checks (must be 0 errors, 0 warnings)
-pnpm check
-
-# 3. Compile edge production bundle
-pnpm build
-```
-
-When applying D1 migrations remotely:
-```powershell
-$env:CLOUDFLARE_ACCOUNT_ID="0e528c886015cce349076fb7db222a88"; pnpm wrangler d1 migrations apply agpro-v2-prod --remote
-```
+### Streamlined 4-Pillar Application Architecture (`DONE`)
+The application is streamlined into 4 core navigation pillars:
+1. **Invoices**: Primary operational view with quick summary metric cards (Total Sales Billed, Pending/Unpaid, Drone Coverage Acres), status filters, full composer, US Letter print preview, and Resend email dispatch.
+2. **Customers (CRM)**: Grower directory, farm entities, contact details, purchase ledger, and linked Iowa seed BOL compliance history.
+3. **Inventory**: Unified catalog (Chemicals, Seed, Drone equipment, Misc), 3-tier pricing, cycle count stock adjustments, and embedded **"Import BOL / Invoices"** modal with R2 document ingestion.
+4. **Staff** (Admin only): Secure staff account lifecycle and RBAC controls.
 
 ---
 

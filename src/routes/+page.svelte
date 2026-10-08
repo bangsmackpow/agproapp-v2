@@ -2,21 +2,16 @@
 	import { auth } from '$lib/stores/auth.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
-	import DashboardOverview from '$lib/components/DashboardOverview.svelte';
 	import InvoicesListView from '$lib/components/InvoicesListView.svelte';
 	import InvoiceComposer from '$lib/components/InvoiceComposer.svelte';
 	import InventoryView from '$lib/components/InventoryView.svelte';
-	import IngestionView from '$lib/components/IngestionView.svelte';
 	import CustomersView from '$lib/components/CustomersView.svelte';
-	import ComplianceView from '$lib/components/ComplianceView.svelte';
-	import ChecksView from '$lib/components/ChecksView.svelte';
 	import StaffManagementView from '$lib/components/StaffManagementView.svelte';
-	import AuditLogsView from '$lib/components/AuditLogsView.svelte';
 	import ProductModal from '$lib/components/ProductModal.svelte';
 	import LoginView from '$lib/components/LoginView.svelte';
 	import { Plane } from 'lucide-svelte';
 
-	let activeTab = $state<string>('dashboard');
+	let activeTab = $state<string>('invoices');
 	let mobileNavOpen = $state<boolean>(false);
 	let isComposingInvoice = $state<boolean>(false);
 	let showProductModal = $state<boolean>(false);
@@ -59,9 +54,7 @@
 
 		<!-- Main Workspace Viewport -->
 		<main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-			{#if activeTab === 'dashboard'}
-				<DashboardOverview onNavigate={switchTab} />
-			{:else if activeTab === 'invoices'}
+			{#if activeTab === 'invoices'}
 				{#if isComposingInvoice}
 					<InvoiceComposer
 						onCancel={() => (isComposingInvoice = false)}
@@ -75,20 +68,12 @@
 						}}
 					/>
 				{/if}
-			{:else if activeTab === 'inventory'}
-				<InventoryView onOpenNewProduct={() => (showProductModal = true)} />
-			{:else if activeTab === 'ingestion'}
-				<IngestionView onImportCompleted={() => {}} />
 			{:else if activeTab === 'customers'}
 				<CustomersView />
-			{:else if activeTab === 'compliance'}
-				<ComplianceView />
-			{:else if activeTab === 'checks'}
-				<ChecksView />
+			{:else if activeTab === 'inventory'}
+				<InventoryView onOpenNewProduct={() => (showProductModal = true)} />
 			{:else if activeTab === 'staff'}
 				<StaffManagementView />
-			{:else if activeTab === 'audit-logs'}
-				<AuditLogsView />
 			{/if}
 		</main>
 

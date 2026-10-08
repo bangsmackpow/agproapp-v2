@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api/client';
 	import { auth } from '$lib/stores/auth.svelte';
-	import type { Product, ProductCategory, DroneUnit } from '$lib/db/schema';
+	import type { Product, ProductCategory } from '$lib/db/schema';
+	import IngestionView from '$lib/components/IngestionView.svelte';
 	import {
 		Package,
 		Plus,
@@ -15,7 +16,9 @@
 		AlertCircle,
 		CheckCircle2,
 		ArrowUpDown,
-		Tag
+		Tag,
+		UploadCloud,
+		X
 	} from 'lucide-svelte';
 
 	let { onOpenNewProduct } = $props<{ onOpenNewProduct?: () => void }>();
@@ -23,10 +26,8 @@
 	let activeCategory = $state<string>('all');
 	let searchQuery = $state<string>('');
 	let products = $state<Product[]>([]);
-	let droneFleet = $state<DroneUnit[]>([]);
 	let loading = $state(false);
-
-	let activeViewTab = $state<'products' | 'fleet'>('products');
+	let showImportModal = $state(false);
 
 	// Adjust Stock Modal State
 	let adjustingProduct = $state<Product | null>(null);
@@ -36,7 +37,6 @@
 
 	$effect(() => {
 		loadInventory();
-		loadFleet();
 	});
 
 	async function loadInventory() {
@@ -50,11 +50,6 @@
 		const res = await apiFetch<{ products: Product[] }>(path);
 		if (res.data) products = res.data.products || [];
 		loading = false;
-	}
-
-	async function loadFleet() {
-		const res = await apiFetch<{ drones: DroneUnit[] }>('/inventory/fleet/drones');
-		if (res.data) droneFleet = res.data.drones || [];
 	}
 
 	async function submitStockAdjustment() {
@@ -104,6 +99,14 @@
 			{:else}
 				<button
 					type="button"
+					onclick={() => (showImportModal = true)}
+					class="gh-btn text-xs font-semibold flex items-center gap-1.5"
+				>
+					<UploadCloud class="w-3.5 h-3.5 text-emerald-500" />
+					Import BOL / Invoices
+				</button>
+				<button
+					type="button"
 					onclick={onOpenNewProduct}
 					class="gh-btn-primary text-xs font-semibold"
 				>
@@ -113,30 +116,6 @@
 			{/if}
 		</div>
 	</div>
-
-	<!-- Sub-tabs: Catalog vs Serialized Drone Fleet -->
-	<div class="flex items-center gap-2 text-xs border-b gh-border-muted pb-2">
-		<button
-			type="button"
-			onclick={() => (activeViewTab = 'products')}
-			class="px-3 py-1 rounded font-medium transition-colors {activeViewTab === 'products'
-				? 'bg-[var(--gh-btn-bg)] font-semibold text-[var(--gh-fg-default)] border gh-border-default'
-				: 'text-[var(--gh-fg-muted)] hover:text-[var(--gh-fg-default)]'}"
-		>
-			All Products ({products.length})
-		</button>
-		<button
-			type="button"
-			onclick={() => (activeViewTab = 'fleet')}
-			class="px-3 py-1 rounded font-medium transition-colors {activeViewTab === 'fleet'
-				? 'bg-[var(--gh-btn-bg)] font-semibold text-[var(--gh-fg-default)] border gh-border-default'
-				: 'text-[var(--gh-fg-muted)] hover:text-[var(--gh-fg-default)]'}"
-		>
-			Serialized Drone Fleet ({droneFleet.length})
-		</button>
-	</div>
-
-	{#if activeViewTab === 'products'}
 		<!-- Filters & Search -->
 		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 			<!-- Category filter buttons -->
@@ -278,52 +257,7 @@
 				</table>
 			</div>
 		</div>
-	{:else}
-		<!-- Serialized Drone Fleet View -->
-		<div class="gh-card overflow-hidden">
-			<div class="p-3.5 border-b gh-border-muted bg-[var(--gh-canvas-inset)] flex items-center justify-between">
-				<h3 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-default)] flex items-center gap-1.5">
-					<Plane class="w-4 h-4 text-emerald-500" />
-					Precision Agricultural Drone Fleet Tracking (DJI Agras Series)
-				</h3>
-				<span class="text-xs text-[var(--gh-fg-muted)]">
-					{droneFleet.length} Registered System(s)
-				</span>
-			</div>
 
-			<div class="divide-y gh-border-muted text-xs">
-				{#each droneFleet as drone}
-					<div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-						<div class="space-y-1">
-							<div class="flex items-center gap-2">
-								<span class="font-bold text-sm text-[var(--gh-fg-default)]">
-									{drone.serialNumber}
-								</span>
-								<span class="gh-badge {drone.condition === 'new' ? 'gh-badge-success' : 'gh-badge-attention'} text-[10px] uppercase">
-									{drone.condition}
-								</span>
-							</div>
-							<p class="text-[11px] text-[var(--gh-fg-muted)]">
-								FAA Registration: <span class="font-mono">{drone.aircraftRegistration || 'Pending'}</span> &bull;
-								Remote Control: <span class="font-mono">{drone.remoteControlSerial || 'N/A'}</span> &bull;
-								Firmware: {drone.firmwareVersion || 'v01.00.00'}
-							</p>
-							{#if drone.notes}
-								<p class="text-[10px] text-[var(--gh-fg-subtle)] italic">{drone.notes}</p>
-							{/if}
-						</div>
-
-						<div class="text-right font-mono">
-							<span class="text-sm font-bold text-[var(--gh-fg-default)]">
-								{drone.flightHoursTotal} hrs
-							</span>
-							<span class="block text-[10px] text-[var(--gh-fg-muted)]">Total Flight Hours</span>
-						</div>
-					</div>
-				{/each}
-			</div>
-		</div>
-	{/if}
 
 	<!-- Stock Adjustment Modal -->
 	{#if adjustingProduct}
@@ -391,6 +325,36 @@
 						Apply Adjustment
 					</button>
 				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Import BOL / Invoices Modal -->
+	{#if showImportModal}
+		<div
+			role="presentation"
+			class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) showImportModal = false;
+			}}
+			onkeydown={(e) => e.key === 'Escape' && (showImportModal = false)}
+		>
+			<div class="gh-card p-5 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl relative my-auto">
+				<div class="flex items-center justify-between pb-3 border-b gh-border-muted">
+					<div class="flex items-center gap-2">
+						<UploadCloud class="w-4 h-4 text-emerald-500" />
+						<h3 class="font-bold text-sm text-[var(--gh-fg-default)]">Import Vendor Invoices & Channel Seed BOLs</h3>
+					</div>
+					<button
+						type="button"
+						onclick={() => (showImportModal = false)}
+						class="gh-btn p-1.5 text-xs"
+						title="Close modal"
+					>
+						<X class="w-4 h-4" />
+					</button>
+				</div>
+				<IngestionView onImportCompleted={() => { loadInventory(); }} />
 			</div>
 		</div>
 	{/if}

@@ -1,17 +1,12 @@
 <script lang="ts">
 	import { auth } from '$lib/stores/auth.svelte';
 	import {
-		LayoutDashboard,
 		FileText,
 		Package,
-		UploadCloud,
 		Users,
-		ShieldCheck,
-		CreditCard,
-		ScrollText,
+		UserCheck,
 		Lock,
-		X,
-		UserCheck
+		X
 	} from 'lucide-svelte';
 
 	let { activeTab, onSelectTab, mobileOpen, onCloseMobile } = $props<{
@@ -30,15 +25,10 @@
 	}
 
 	const navItems: NavItem[] = [
-		{ id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
 		{ id: 'invoices', label: 'Invoices', icon: FileText },
-		{ id: 'inventory', label: 'Inventory', icon: Package },
 		{ id: 'customers', label: 'Customers', icon: Users },
-		{ id: 'ingestion', label: 'BOL & Ingestion', icon: UploadCloud, requiredRole: 'manager' },
-		{ id: 'compliance', label: 'Seed Audits', icon: ShieldCheck, badge: 'IDALS' },
-		{ id: 'checks', label: 'Checks', icon: CreditCard, requiredRole: 'admin', badge: 'Admin' },
-		{ id: 'staff', label: 'Staff', icon: UserCheck, requiredRole: 'admin', badge: 'Admin' },
-		{ id: 'audit-logs', label: 'Audit Logs', icon: ScrollText, requiredRole: 'admin' }
+		{ id: 'inventory', label: 'Inventory', icon: Package },
+		{ id: 'staff', label: 'Staff', icon: UserCheck, requiredRole: 'admin', badge: 'Admin' }
 	];
 
 	function isItemLocked(item: NavItem): boolean {

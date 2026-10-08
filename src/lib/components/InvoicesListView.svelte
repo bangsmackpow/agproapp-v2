@@ -11,7 +11,9 @@
 		XCircle,
 		ShieldCheck,
 		ArrowUpRight,
-		Clock
+		Clock,
+		DollarSign,
+		Plane
 	} from 'lucide-svelte';
 
 	import InvoicePrintModal from './InvoicePrintModal.svelte';
@@ -61,6 +63,19 @@
 		cash_app: { label: 'Cash App', color: 'text-blue-500' },
 		carry: { label: 'Carry', color: 'text-amber-500' }
 	};
+
+	let totalRevenue = $derived(
+		invoices.reduce((sum, inv) => sum + (inv.status !== 'canceled' ? inv.totalAmount : 0), 0)
+	);
+	let pendingAmount = $derived(
+		invoices
+			.filter((i) => i.status === 'sent' || i.status === 'draft')
+			.reduce((sum, i) => sum + i.totalAmount, 0)
+	);
+	let pendingCount = $derived(invoices.filter((i) => i.status === 'sent' || i.status === 'draft').length);
+	let totalAcres = $derived(
+		invoices.reduce((sum, inv) => sum + (inv.acresTreated || 0), 0)
+	);
 </script>
 
 <div class="space-y-4">
@@ -85,6 +100,48 @@
 				<Plus class="w-3.5 h-3.5" />
 				New Invoice
 			</button>
+		</div>
+	</div>
+
+	<!-- Quick Summary Metrics -->
+	<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+		<div class="gh-card p-3.5 space-y-1">
+			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
+				<span class="text-[11px] font-semibold uppercase tracking-wider">Total Sales Billed</span>
+				<DollarSign class="w-3.5 h-3.5 text-emerald-500" />
+			</div>
+			<div class="text-xl font-bold font-mono text-[var(--gh-fg-default)]">
+				${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+			</div>
+			<span class="text-[10px] text-[var(--gh-fg-muted)] block">
+				{invoices.length} total invoices
+			</span>
+		</div>
+
+		<div class="gh-card p-3.5 space-y-1">
+			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
+				<span class="text-[11px] font-semibold uppercase tracking-wider">Pending / Unpaid</span>
+				<Clock class="w-3.5 h-3.5 text-amber-500" />
+			</div>
+			<div class="text-xl font-bold font-mono text-[var(--gh-fg-default)]">
+				${pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+			</div>
+			<span class="text-[10px] text-[var(--gh-fg-muted)] block">
+				{pendingCount} drafts & sent
+			</span>
+		</div>
+
+		<div class="gh-card p-3.5 space-y-1">
+			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
+				<span class="text-[11px] font-semibold uppercase tracking-wider">Drone Coverage</span>
+				<Plane class="w-3.5 h-3.5 text-blue-500" />
+			</div>
+			<div class="text-xl font-bold font-mono text-[var(--gh-fg-default)]">
+				{totalAcres.toLocaleString()} <span class="text-xs font-sans font-normal text-[var(--gh-fg-muted)]">acres</span>
+			</div>
+			<span class="text-[10px] text-[var(--gh-fg-muted)] block">
+				Custom application
+			</span>
 		</div>
 	</div>
 
