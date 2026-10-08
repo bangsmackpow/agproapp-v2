@@ -125,4 +125,36 @@ LINE ITEMS:
 			`Expected 404 or 500 without DB, got ${previewRes.status}`
 		);
 	});
+
+	test('Draft invoice PUT endpoint requires valid customer and line items', async () => {
+		const putRes = await api.request('/api/invoices/inv_test_draft', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+				'x-user-role': 'sales'
+			},
+			body: JSON.stringify({
+				customerId: '',
+				pricingTier: 'cash_app',
+				items: []
+			})
+		});
+		assert.ok(
+			putRes.status === 400 || putRes.status === 500,
+			`Expected 400 validation error or 500 fallback, got ${putRes.status}`
+		);
+	});
+
+	test('Draft invoice DELETE endpoint validates invoice existence', async () => {
+		const delRes = await api.request('/api/invoices/inv_non_existent', {
+			method: 'DELETE',
+			headers: {
+				'x-user-role': 'sales'
+			}
+		});
+		assert.ok(
+			delRes.status === 404 || delRes.status === 500,
+			`Expected 404 or 500 fallback, got ${delRes.status}`
+		);
+	});
 });

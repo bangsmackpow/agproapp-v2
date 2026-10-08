@@ -16,9 +16,16 @@
 		ArrowRight
 	} from 'lucide-svelte';
 
-	let { onSaved, onCancel } = $props<{
+	let {
+		onSaved,
+		onCancel,
+		editingInvoice = null,
+		initialCustomerId = ''
+	} = $props<{
 		onSaved?: (invoice: any) => void;
 		onCancel?: () => void;
+		editingInvoice?: any;
+		initialCustomerId?: string;
 	}>();
 
 	// Component State
@@ -76,13 +83,44 @@
 		]);
 
 		if (custRes.data) customers = custRes.data.customers || [];
-		if (prodRes.data) {
-			products = prodRes.data.products || [];
-			if (lineItems.length === 0) {
-				addLineItem();
+		if (prodRes.data) products = prodRes.data.products || [];
+
+		if (editingInvoice) {
+			selectedCustomerId = editingInvoice.customerId;
+			pricingTier = editingInvoice.pricingStrategyTier || 'cash_app';
+			issueDate = editingInvoice.issueDate || issueDate;
+			dueDate = editingInvoice.dueDate || dueDate;
+			acresTreated = editingInvoice.acresTreated ?? undefined;
+			fieldLocationDescription = editingInvoice.fieldLocationDescription || '';
+			notes = editingInvoice.notes || '';
+			if (editingInvoice.items && editingInvoice.items.length > 0) {
+				lineItems = editingInvoice.items.map((it: any) => {
+					const prod = products.find((p) => p.id === it.productId);
+					return {
+						id: it.id || crypto.randomUUID(),
+						productId: it.productId,
+						productName: prod?.name || it.product?.name || it.description || 'Product',
+						category: prod?.category || it.product?.category || 'chemical',
+						quantity: it.quantity,
+						unit: it.unit || prod?.unit || 'unit',
+						unitCostBasis: it.unitCostBasis ?? prod?.costBasis ?? 0,
+						unitSellingPrice: it.unitSellingPrice,
+						isRegulated: it.isIowaComplianceVerified || prod?.isRegulated || false,
+						bolNumber: it.bolNumber || '',
+						orderNumber: it.orderNumber || '',
+						droneUnitSerialNumber: it.droneUnitSerialNumber || ''
+					};
+				});
 			}
-		} else if (lineItems.length === 0) {
-			addLineItem();
+			if (selectedCustomerId) {
+				await onCustomerChange(selectedCustomerId);
+			}
+		} else if (initialCustomerId) {
+			selectedCustomerId = initialCustomerId;
+			await onCustomerChange(initialCustomerId);
+			if (lineItems.length === 0) addLineItem();
+		} else {
+			if (lineItems.length === 0) addLineItem();
 		}
 		loading = false;
 	}
@@ -257,8 +295,12 @@
 			}))
 		};
 
-		const res = await apiFetch('/invoices', {
-			method: 'POST',
+		const isEdit = !!editingInvoice;
+		const endpoint = isEdit ? `/invoices/${editingInvoice.id}` : '/invoices';
+		const method = isEdit ? 'PUT' : 'POST';
+
+		const res = await apiFetch(endpoint, {
+			method,
 			body: JSON.stringify(payload)
 		});
 
@@ -274,8 +316,25 @@
 					body: JSON.stringify({ status: 'sent' })
 				});
 			}
-			successMessage = `Invoice ${invoice.invoiceNumber} created successfully!`;
+			successMessage = isEdit
+				? `Draft invoice ${invoice.invoiceNumber} updated successfully!`
+				: `Invoice ${invoice.invoiceNumber} created successfully!`;
 			onSaved?.(invoice);
+		}
+	}
+
+	async function handleDeleteDraft() {
+		if (!editingInvoice) return;
+		if (!confirm(`Are you sure you want to delete draft invoice ${editingInvoice.invoiceNumber}? This will return items to stock.`)) return;
+		loading = true;
+		const res = await apiFetch(`/invoices/${editingInvoice.id}`, {
+			method: 'DELETE'
+		});
+		loading = false;
+		if (res.error) {
+			error = res.error;
+		} else {
+			onCancel?.();
 		}
 	}
 </script>
@@ -286,14 +345,34 @@
 		<div>
 			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
 				<Calculator class="w-5 h-5 text-emerald-500" />
-				New Invoice
+				{#if editingInvoice}
+					Edit Draft: {editingInvoice.invoiceNumber}
+				{:else}
+					New Invoice
+				{/if}
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Select customer, pricing tier, and add line items.
+				{#if editingInvoice}
+					Modify line items, quantities, pricing, or customer details before dispatching.
+				{:else}
+					Select customer, pricing tier, and add line items.
+				{/if}
 			</p>
 		</div>
 
 		<div class="flex items-center gap-2">
+			{#if editingInvoice}
+				<button
+					type="button"
+					onclick={handleDeleteDraft}
+					disabled={loading}
+					class="gh-btn text-xs text-rose-500 hover:bg-rose-500/10 border-rose-500/30"
+					title="Delete this draft invoice"
+				>
+					<Trash2 class="w-3.5 h-3.5" />
+					Delete Draft
+				</button>
+			{/if}
 			{#if onCancel}
 				<button type="button" onclick={onCancel} class="gh-btn text-xs">
 					Cancel
@@ -306,7 +385,7 @@
 				class="gh-btn text-xs font-semibold"
 			>
 				<Save class="w-3.5 h-3.5" />
-				Save Draft
+				{editingInvoice ? 'Update Draft' : 'Save Draft'}
 			</button>
 			<button
 				type="button"

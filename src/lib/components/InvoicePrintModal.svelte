@@ -1,9 +1,12 @@
 <script lang="ts">
-	import { Printer, X, ShieldCheck, Plane } from 'lucide-svelte';
+	import { Printer, X, ShieldCheck, Plane, Pencil, Send, CheckCircle2 } from 'lucide-svelte';
 
-	let { invoice, onClose } = $props<{
+	let { invoice, onClose, onEdit, onDispatch, onMarkPaid } = $props<{
 		invoice: any;
 		onClose: () => void;
+		onEdit?: (invoice: any) => void;
+		onDispatch?: (invoice: any) => void;
+		onMarkPaid?: (invoice: any) => void;
 	}>();
 
 	const hasRegulatedSeed = $derived(
@@ -25,18 +28,51 @@
 			<div class="flex items-center gap-2">
 				<Printer class="w-4 h-4 text-emerald-500" />
 				<h3 class="font-bold text-sm text-[var(--gh-fg-default)]">
-					Print Engine Layout: Invoice {invoice.invoiceNumber}
+					Invoice: {invoice.invoiceNumber}
 				</h3>
+				<span class="gh-badge text-[10px] uppercase font-semibold {invoice.status === 'paid' ? 'gh-badge-success' : invoice.status === 'sent' ? 'border-blue-500/40 text-blue-500' : 'text-[var(--gh-fg-muted)]'}">
+					{invoice.status}
+				</span>
 			</div>
 
 			<div class="flex items-center gap-2">
+				{#if invoice.status === 'draft' && onEdit}
+					<button
+						type="button"
+						onclick={() => { onClose(); onEdit(invoice); }}
+						class="gh-btn text-xs font-semibold"
+					>
+						<Pencil class="w-3.5 h-3.5 text-blue-500" />
+						Edit Draft
+					</button>
+				{/if}
+				{#if onDispatch}
+					<button
+						type="button"
+						onclick={() => onDispatch(invoice)}
+						class="gh-btn text-xs font-semibold"
+					>
+						<Send class="w-3.5 h-3.5 text-blue-500" />
+						Email / Dispatch
+					</button>
+				{/if}
+				{#if invoice.status === 'sent' && onMarkPaid}
+					<button
+						type="button"
+						onclick={() => onMarkPaid(invoice)}
+						class="gh-btn text-xs font-semibold text-emerald-500"
+					>
+						<CheckCircle2 class="w-3.5 h-3.5" />
+						Mark Paid
+					</button>
+				{/if}
 				<button
 					type="button"
 					onclick={() => window.print()}
 					class="gh-btn-primary text-xs font-semibold"
 				>
 					<Printer class="w-3.5 h-3.5" />
-					Print Standard Letter (8.5" x 11")
+					Print (8.5" x 11")
 				</button>
 				<button type="button" onclick={onClose} class="gh-btn text-xs">
 					Close

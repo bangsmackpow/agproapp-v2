@@ -1,7 +1,17 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api/client';
 	import type { Customer } from '$lib/db/schema';
-	import { Users, Plus, Search, MapPin, Phone, Mail, FileText, ShieldCheck, DollarSign } from 'lucide-svelte';
+	import { Users, Plus, Search, MapPin, Phone, Mail, FileText, ShieldCheck, DollarSign, ArrowUpRight, X } from 'lucide-svelte';
+
+	let {
+		initialCustomerId = '',
+		onSelectInvoice,
+		onNewInvoiceForCustomer
+	} = $props<{
+		initialCustomerId?: string;
+		onSelectInvoice?: (invoice: any) => void;
+		onNewInvoiceForCustomer?: (customer: any) => void;
+	}>();
 
 	let customers = $state<Customer[]>([]);
 	let loading = $state(false);
@@ -14,7 +24,7 @@
 	let showCreateModal = $state(false);
 	let newCustName = $state('');
 	let newCustFarm = $state('');
-	let newCustCounty = $state('Story');
+	let newCustCounty = $state('Union');
 	let newCustPhone = $state('');
 	let newCustEmail = $state('');
 	let newCustAddress = $state('');
@@ -22,6 +32,12 @@
 
 	$effect(() => {
 		loadCustomers();
+	});
+
+	$effect(() => {
+		if (initialCustomerId) {
+			inspectCustomer(initialCustomerId);
+		}
 	});
 
 	async function loadCustomers() {
@@ -243,10 +259,23 @@
 
 				<!-- Recent Invoices -->
 				<div class="space-y-2">
-					<h4 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-muted)] flex items-center gap-1.5">
-						<FileText class="w-4 h-4 text-blue-500" />
-						Recent Invoices ({selectedCustomer.invoices?.length || 0})
-					</h4>
+					<div class="flex items-center justify-between">
+						<h4 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-muted)] flex items-center gap-1.5">
+							<FileText class="w-4 h-4 text-blue-500" />
+							Recent Invoices ({selectedCustomer.invoices?.length || 0})
+						</h4>
+						{#if onNewInvoiceForCustomer}
+							<button
+								type="button"
+								onclick={() => onNewInvoiceForCustomer(selectedCustomer)}
+								class="gh-btn-primary text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+								title="Create a new invoice pre-filled for this customer"
+							>
+								<Plus class="w-3 h-3" />
+								New Invoice
+							</button>
+						{/if}
+					</div>
 
 					{#if !selectedCustomer.invoices || selectedCustomer.invoices.length === 0}
 						<p class="text-xs text-[var(--gh-fg-subtle)] italic p-3 gh-card-inset rounded">
@@ -255,16 +284,24 @@
 					{:else}
 						<div class="divide-y gh-border-muted border gh-border-muted rounded gh-card-inset text-xs">
 							{#each selectedCustomer.invoices as inv}
-								<div class="p-2.5 flex items-center justify-between">
-									<div>
-										<span class="font-mono font-bold text-emerald-500">{inv.invoiceNumber}</span>
-										<span class="text-[10px] text-[var(--gh-fg-muted)] ml-2">({inv.issueDate})</span>
+								<button
+									type="button"
+									onclick={() => onSelectInvoice?.({ ...inv, customer: selectedCustomer })}
+									class="w-full p-2.5 flex items-center justify-between hover:bg-[var(--gh-canvas-subtle)] transition-colors text-left cursor-pointer group"
+									title={inv.status === 'draft' ? 'Click to edit draft invoice' : 'Click to view / print invoice'}
+								>
+									<div class="flex items-center gap-1.5">
+										<span class="font-mono font-bold text-emerald-500 group-hover:underline flex items-center gap-1">
+											{inv.invoiceNumber}
+											<ArrowUpRight class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
+										</span>
+										<span class="text-[10px] text-[var(--gh-fg-muted)]">({inv.issueDate})</span>
 									</div>
 									<div class="text-right font-mono">
-										<span class="font-bold">${inv.totalAmount.toFixed(2)}</span>
-										<span class="gh-badge text-[9px] uppercase ml-2">{inv.status}</span>
+										<span class="font-bold text-[var(--gh-fg-default)]">${inv.totalAmount.toFixed(2)}</span>
+										<span class="gh-badge text-[9px] uppercase ml-2 {inv.status === 'paid' ? 'gh-badge-success' : inv.status === 'sent' ? 'border-blue-500/40 text-blue-500' : 'text-[var(--gh-fg-muted)]'}">{inv.status}</span>
 									</div>
-								</div>
+								</button>
 							{/each}
 						</div>
 					{/if}
@@ -322,12 +359,14 @@
 								bind:value={newCustCounty}
 								class="w-full p-2 rounded border gh-border-default gh-card-inset text-xs"
 							>
+								<option value="Union">Union County, IA (Creston)</option>
+								<option value="Adams">Adams County, IA (Corning)</option>
+								<option value="Clarke">Clarke County, IA (Osceola)</option>
+								<option value="Ringgold">Ringgold County, IA (Mount Ayr)</option>
+								<option value="Taylor">Taylor County, IA (Bedford)</option>
+								<option value="Adair">Adair County, IA (Greenfield)</option>
 								<option value="Story">Story County, IA</option>
-								<option value="Hamilton">Hamilton County, IA</option>
-								<option value="Boone">Boone County, IA</option>
-								<option value="Hardin">Hardin County, IA</option>
 								<option value="Polk">Polk County, IA</option>
-								<option value="Dallas">Dallas County, IA</option>
 							</select>
 						</div>
 					</div>

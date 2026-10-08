@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { auth } from '$lib/stores/auth.svelte';
+	import { apiFetch } from '$lib/api/client';
 	import Header from '$lib/components/Header.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import InvoicesListView from '$lib/components/InvoicesListView.svelte';
@@ -8,17 +9,71 @@
 	import CustomersView from '$lib/components/CustomersView.svelte';
 	import StaffManagementView from '$lib/components/StaffManagementView.svelte';
 	import ProductModal from '$lib/components/ProductModal.svelte';
+	import InvoicePrintModal from '$lib/components/InvoicePrintModal.svelte';
 	import LoginView from '$lib/components/LoginView.svelte';
 	import { Plane } from 'lucide-svelte';
 
 	let activeTab = $state<string>('invoices');
 	let mobileNavOpen = $state<boolean>(false);
 	let isComposingInvoice = $state<boolean>(false);
+	let editingInvoice = $state<any | null>(null);
+	let selectedCustomerIdForInvoice = $state<string>('');
+	let selectedCustomerIdForView = $state<string>('');
+	let viewingInvoiceModal = $state<any | null>(null);
 	let showProductModal = $state<boolean>(false);
 
 	function switchTab(tab: string) {
 		activeTab = tab;
 		isComposingInvoice = false;
+		editingInvoice = null;
+		selectedCustomerIdForInvoice = '';
+	}
+
+	function openComposerForNew(customerId?: string) {
+		activeTab = 'invoices';
+		editingInvoice = null;
+		selectedCustomerIdForInvoice = customerId || '';
+		isComposingInvoice = true;
+	}
+
+	function openComposerForEdit(invoice: any) {
+		activeTab = 'invoices';
+		editingInvoice = invoice;
+		selectedCustomerIdForInvoice = '';
+		isComposingInvoice = true;
+	}
+
+	function openCustomerProfile(customerId: string) {
+		activeTab = 'customers';
+		selectedCustomerIdForView = customerId;
+	}
+
+	async function openInvoiceViewer(invoiceOrId: any) {
+		if (typeof invoiceOrId === 'string') {
+			const res = await apiFetch<{ invoice: any }>(`/invoices/${invoiceOrId}`);
+			if (res.data?.invoice) {
+				const inv = res.data.invoice;
+				if (inv.status === 'draft') {
+					openComposerForEdit(inv);
+				} else {
+					viewingInvoiceModal = inv;
+				}
+			} else {
+				const listRes = await apiFetch<{ invoices: any[] }>(`/invoices`);
+				const match = listRes.data?.invoices?.find((i: any) => i.invoiceNumber === invoiceOrId || i.id === invoiceOrId);
+				if (match) {
+					if (match.status === 'draft') {
+						openComposerForEdit(match);
+					} else {
+						viewingInvoiceModal = match;
+					}
+				}
+			}
+		} else if (invoiceOrId?.status === 'draft') {
+			openComposerForEdit(invoiceOrId);
+		} else {
+			viewingInvoiceModal = invoiceOrId;
+		}
 	}
 </script>
 
@@ -57,21 +112,38 @@
 			{#if activeTab === 'invoices'}
 				{#if isComposingInvoice}
 					<InvoiceComposer
-						onCancel={() => (isComposingInvoice = false)}
-						onSaved={() => (isComposingInvoice = false)}
+						{editingInvoice}
+						initialCustomerId={selectedCustomerIdForInvoice}
+						onCancel={() => {
+							isComposingInvoice = false;
+							editingInvoice = null;
+							selectedCustomerIdForInvoice = '';
+						}}
+						onSaved={() => {
+							isComposingInvoice = false;
+							editingInvoice = null;
+							selectedCustomerIdForInvoice = '';
+						}}
 					/>
 				{:else}
 					<InvoicesListView
-						onOpenComposer={() => (isComposingInvoice = true)}
-						onSelectInvoice={(inv) => {
-							// Open invoice in composer or preview
-						}}
+						onOpenComposer={() => openComposerForNew()}
+						onSelectInvoice={(inv) => openInvoiceViewer(inv)}
+						onEditInvoice={(inv) => openComposerForEdit(inv)}
+						onSelectCustomer={(cust) => openCustomerProfile(cust.id)}
 					/>
 				{/if}
 			{:else if activeTab === 'customers'}
-				<CustomersView />
+				<CustomersView
+					initialCustomerId={selectedCustomerIdForView}
+					onSelectInvoice={(inv) => openInvoiceViewer(inv)}
+					onNewInvoiceForCustomer={(cust) => openComposerForNew(cust.id)}
+				/>
 			{:else if activeTab === 'inventory'}
-				<InventoryView onOpenNewProduct={() => (showProductModal = true)} />
+				<InventoryView
+					onOpenNewProduct={() => (showProductModal = true)}
+					onSelectInvoice={(invNum) => openInvoiceViewer(invNum)}
+				/>
 			{:else if activeTab === 'staff'}
 				<StaffManagementView />
 			{/if}
@@ -102,6 +174,18 @@
 			<ProductModal
 				onClose={() => (showProductModal = false)}
 				onCreated={() => (showProductModal = false)}
+			/>
+		{/if}
+
+		<!-- Global Actionable Invoice Viewer Modal -->
+		{#if viewingInvoiceModal}
+			<InvoicePrintModal
+				invoice={viewingInvoiceModal}
+				onClose={() => (viewingInvoiceModal = null)}
+				onEdit={(inv) => {
+					viewingInvoiceModal = null;
+					openComposerForEdit(inv);
+				}}
 			/>
 		{/if}
 	</div>

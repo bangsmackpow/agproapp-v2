@@ -13,15 +13,24 @@
 		ArrowUpRight,
 		Clock,
 		DollarSign,
-		Plane
+		Plane,
+		Pencil,
+		Trash2
 	} from 'lucide-svelte';
 
 	import InvoicePrintModal from './InvoicePrintModal.svelte';
 	import InvoiceDispatchModal from './InvoiceDispatchModal.svelte';
 
-	let { onOpenComposer, onSelectInvoice } = $props<{
+	let {
+		onOpenComposer,
+		onSelectInvoice,
+		onEditInvoice,
+		onSelectCustomer
+	} = $props<{
 		onOpenComposer?: () => void;
 		onSelectInvoice?: (invoice: any) => void;
+		onEditInvoice?: (invoice: any) => void;
+		onSelectCustomer?: (customer: any) => void;
 	}>();
 
 	let invoices = $state<any[]>([]);
@@ -48,6 +57,12 @@
 			method: 'PATCH',
 			body: JSON.stringify({ status: newStatus })
 		});
+		loadInvoices();
+	}
+
+	async function deleteDraft(inv: any) {
+		if (!confirm(`Are you sure you want to delete draft invoice ${inv.invoiceNumber}? This will return items to stock.`)) return;
+		await apiFetch(`/invoices/${inv.id}`, { method: 'DELETE' });
 		loadInvoices();
 	}
 
@@ -199,11 +214,22 @@
 								<td class="p-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">
 									<button
 										type="button"
-										onclick={() => onSelectInvoice?.(inv)}
-										class="hover:underline flex items-center gap-1"
+										onclick={() => {
+											if (inv.status === 'draft') {
+												onEditInvoice ? onEditInvoice(inv) : onSelectInvoice?.(inv);
+											} else {
+												activePrintInvoice = inv;
+											}
+										}}
+										class="hover:underline flex items-center gap-1 group text-left cursor-pointer"
+										title={inv.status === 'draft' ? 'Click to edit draft' : 'Click to view / print invoice'}
 									>
-										{inv.invoiceNumber}
-										<ArrowUpRight class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
+										<span>{inv.invoiceNumber}</span>
+										{#if inv.status === 'draft'}
+											<Pencil class="w-3 h-3 text-blue-500 opacity-60 group-hover:opacity-100" />
+										{:else}
+											<ArrowUpRight class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
+										{/if}
 									</button>
 									{#if inv.items?.some((it: any) => it.isIowaComplianceVerified)}
 										<span class="gh-badge gh-badge-success text-[8px] mt-0.5 inline-flex items-center gap-1">
@@ -214,12 +240,29 @@
 
 								<!-- Customer Name & County -->
 								<td class="p-3">
-									<p class="font-semibold text-[var(--gh-fg-default)]">
-										{inv.customer?.name || 'Unknown Customer'}
-									</p>
-									<p class="text-[10px] text-[var(--gh-fg-muted)]">
-										{inv.customer?.farmName} &bull; {inv.customer?.county} Co, IA
-									</p>
+									{#if onSelectCustomer && inv.customer}
+										<button
+											type="button"
+											onclick={() => onSelectCustomer?.(inv.customer)}
+											class="hover:underline text-left group cursor-pointer"
+											title="View grower CRM profile & history"
+										>
+											<p class="font-semibold text-[var(--gh-fg-default)] group-hover:text-emerald-500 transition-colors flex items-center gap-1">
+												{inv.customer?.name || 'Unknown Customer'}
+												<ArrowUpRight class="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
+											</p>
+											<p class="text-[10px] text-[var(--gh-fg-muted)]">
+												{inv.customer?.farmName} &bull; {inv.customer?.county} Co, IA
+											</p>
+										</button>
+									{:else}
+										<p class="font-semibold text-[var(--gh-fg-default)]">
+											{inv.customer?.name || 'Unknown Customer'}
+										</p>
+										<p class="text-[10px] text-[var(--gh-fg-muted)]">
+											{inv.customer?.farmName} &bull; {inv.customer?.county} Co, IA
+										</p>
+									{/if}
 								</td>
 
 								<!-- Pricing Strategy Tier -->
@@ -263,15 +306,28 @@
 								<!-- Quick Actions -->
 								<td class="p-3 text-center">
 									<div class="flex items-center justify-center gap-1.5">
+										{#if inv.status === 'draft'}
+											<button
+												type="button"
+												onclick={() => onEditInvoice ? onEditInvoice(inv) : onSelectInvoice?.(inv)}
+												class="gh-btn text-[11px] py-0.5 px-2 text-blue-500 hover:bg-blue-500/10"
+												title="Edit Draft Invoice"
+											>
+												<Pencil class="w-3 h-3" />
+												Edit
+											</button>
+										{/if}
+
 										<button
 											type="button"
 											onclick={() => (activePrintInvoice = inv)}
 											class="gh-btn text-[11px] py-0.5 px-2"
-											title="Preview & Print Physical Letter Layout"
+											title="View & Print Physical Letter Layout"
 										>
 											<Printer class="w-3 h-3 text-emerald-500" />
 											Print
 										</button>
+
 										{#if inv.status === 'draft'}
 											<button
 												type="button"
@@ -282,7 +338,24 @@
 												<Send class="w-3 h-3" />
 												Dispatch
 											</button>
+											<button
+												type="button"
+												onclick={() => deleteDraft(inv)}
+												class="gh-btn text-[11px] py-0.5 px-1.5 text-rose-500 hover:bg-rose-500/10"
+												title="Delete Draft"
+											>
+												<Trash2 class="w-3 h-3" />
+											</button>
 										{:else if inv.status === 'sent'}
+											<button
+												type="button"
+												onclick={() => (activeDispatchInvoice = inv)}
+												class="gh-btn text-[11px] py-0.5 px-2 text-blue-500 hover:bg-blue-500/10"
+												title="Resend Electronic Invoice"
+											>
+												<Send class="w-3 h-3" />
+												Resend
+											</button>
 											<button
 												type="button"
 												onclick={() => updateStatus(inv.id, 'paid')}
@@ -291,6 +364,16 @@
 											>
 												<CheckCircle2 class="w-3 h-3" />
 												Paid
+											</button>
+										{:else if inv.status === 'paid'}
+											<button
+												type="button"
+												onclick={() => (activeDispatchInvoice = inv)}
+												class="gh-btn text-[11px] py-0.5 px-2 text-[var(--gh-fg-muted)]"
+												title="Send Receipt Email"
+											>
+												<Send class="w-3 h-3" />
+												Receipt
 											</button>
 										{/if}
 									</div>
@@ -303,11 +386,22 @@
 		</div>
 	</div>
 
-	<!-- Printable Invoice Modal (Physical Print Optimization) -->
+	<!-- Printable & Actionable Invoice Modal -->
 	{#if activePrintInvoice}
 		<InvoicePrintModal
 			invoice={activePrintInvoice}
 			onClose={() => (activePrintInvoice = null)}
+			onEdit={(inv) => {
+				activePrintInvoice = null;
+				onEditInvoice ? onEditInvoice(inv) : onSelectInvoice?.(inv);
+			}}
+			onDispatch={(inv) => {
+				activeDispatchInvoice = inv;
+			}}
+			onMarkPaid={(inv) => {
+				updateStatus(inv.id, 'paid');
+				activePrintInvoice = null;
+			}}
 		/>
 	{/if}
 

@@ -18,16 +18,22 @@
 		ArrowUpDown,
 		Tag,
 		UploadCloud,
-		X
+		X,
+		ArrowUpRight,
+		FileText
 	} from 'lucide-svelte';
 
-	let { onOpenNewProduct } = $props<{ onOpenNewProduct?: () => void }>();
+	let { onOpenNewProduct, onSelectInvoice } = $props<{
+		onOpenNewProduct?: () => void;
+		onSelectInvoice?: (invoiceNumber: string) => void;
+	}>();
 
 	let activeCategory = $state<string>('all');
 	let searchQuery = $state<string>('');
 	let products = $state<Product[]>([]);
 	let loading = $state(false);
 	let showImportModal = $state(false);
+	let selectedProduct = $state<any | null>(null);
 
 	// Adjust Stock Modal State
 	let adjustingProduct = $state<Product | null>(null);
@@ -50,6 +56,13 @@
 		const res = await apiFetch<{ products: Product[] }>(path);
 		if (res.data) products = res.data.products || [];
 		loading = false;
+	}
+
+	async function inspectProduct(id: string) {
+		const res = await apiFetch<{ product: any }>(`/inventory/${id}`);
+		if (res.data?.product) {
+			selectedProduct = res.data.product;
+		}
 	}
 
 	async function submitStockAdjustment() {
@@ -184,12 +197,20 @@
 								{@const Icon = categoryIcons[prod.category] || Package}
 								<tr class="hover:bg-[var(--gh-canvas-inset)] transition-colors">
 									<td class="p-3">
-										<div class="flex items-start gap-2">
-											<div class="p-1.5 rounded bg-[var(--gh-canvas-inset)] border gh-border-muted text-emerald-500 mt-0.5">
+										<button
+											type="button"
+											onclick={() => inspectProduct(prod.id)}
+											class="flex items-start gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+											title="View product specifications & invoice field history"
+										>
+											<div class="p-1.5 rounded bg-[var(--gh-canvas-inset)] border gh-border-muted text-emerald-500 mt-0.5 group-hover:border-emerald-500 transition-colors">
 												<Icon class="w-3.5 h-3.5" />
 											</div>
 											<div>
-												<p class="font-semibold text-[var(--gh-fg-default)]">{prod.name}</p>
+												<p class="font-semibold text-[var(--gh-fg-default)] group-hover:text-emerald-500 transition-colors flex items-center gap-1">
+													{prod.name}
+													<ArrowUpRight class="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
+												</p>
 												<div class="flex items-center gap-1.5 text-[10px] text-[var(--gh-fg-muted)] mt-0.5">
 													<span class="gh-badge text-[9px] uppercase">{prod.category}</span>
 													<span>Unit: {prod.unit}</span>
@@ -204,7 +225,7 @@
 													{/if}
 												</div>
 											</div>
-										</div>
+										</button>
 									</td>
 
 									<td class="p-3 font-mono text-[11px] text-[var(--gh-fg-subtle)]">
@@ -355,6 +376,138 @@
 					</button>
 				</div>
 				<IngestionView onImportCompleted={() => { loadInventory(); }} />
+			</div>
+		</div>
+	{/if}
+
+	<!-- Product Detail Slide-Over Drawer -->
+	{#if selectedProduct}
+		<div
+			role="presentation"
+			class="fixed inset-0 bg-black/60 z-50 flex justify-end backdrop-blur-xs"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) selectedProduct = null;
+			}}
+			onkeydown={(e) => e.key === 'Escape' && (selectedProduct = null)}
+		>
+			<div class="bg-[var(--gh-card-bg)] border-l gh-border-default w-full max-w-lg h-full overflow-y-auto p-6 space-y-6 shadow-2xl">
+				<!-- Header -->
+				<div class="flex items-start justify-between pb-4 border-b gh-border-muted">
+					<div class="space-y-1">
+						<span class="gh-badge text-[10px] uppercase font-bold text-emerald-500">{selectedProduct.category}</span>
+						<h3 class="text-base font-bold text-[var(--gh-fg-default)]">{selectedProduct.name}</h3>
+						<p class="text-xs font-mono text-[var(--gh-fg-subtle)]">
+							SKU: {selectedProduct.sku}
+							{#if selectedProduct.epaRegNumber}
+								&bull; EPA: {selectedProduct.epaRegNumber}
+							{/if}
+						</p>
+					</div>
+					<button
+						type="button"
+						onclick={() => (selectedProduct = null)}
+						class="p-1 rounded hover:bg-[var(--gh-canvas-inset)] text-[var(--gh-fg-muted)] cursor-pointer"
+					>
+						<X class="w-4 h-4" />
+					</button>
+				</div>
+
+				<!-- Current Stock & Quick Adjustment -->
+				<div class="p-3.5 bg-[var(--gh-canvas-inset)] border gh-border-muted rounded-md flex items-center justify-between">
+					<div>
+						<span class="text-[10px] uppercase tracking-wider text-[var(--gh-fg-muted)] font-semibold block">On-Hand Stock</span>
+						<span class="text-xl font-bold font-mono text-[var(--gh-fg-default)]">
+							{selectedProduct.currentStock} <span class="text-xs font-sans font-normal text-[var(--gh-fg-muted)]">{selectedProduct.unit}</span>
+						</span>
+					</div>
+					{#if auth.canManageInventory}
+						<button
+							type="button"
+							onclick={() => {
+								adjustingProduct = selectedProduct;
+								stockDelta = 10;
+								adjustNotes = '';
+							}}
+							class="gh-btn text-xs font-semibold"
+						>
+							Adjust Stock
+						</button>
+					{/if}
+				</div>
+
+				<!-- Pricing Tiers Card -->
+				<div class="space-y-2">
+					<h4 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-muted)]">3-Tier Pricing Structure</h4>
+					<div class="grid grid-cols-3 gap-2 text-xs">
+						<div class="p-2.5 rounded bg-[var(--gh-canvas-subtle)] border gh-border-muted space-y-0.5">
+							<span class="text-[10px] text-emerald-500 font-semibold block">Financed App</span>
+							<span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">${selectedProduct.financedAppPrice.toFixed(2)}</span>
+						</div>
+						<div class="p-2.5 rounded bg-[var(--gh-canvas-subtle)] border gh-border-muted space-y-0.5">
+							<span class="text-[10px] text-blue-500 font-semibold block">Cash App</span>
+							<span class="font-mono font-bold text-blue-600 dark:text-blue-400">${selectedProduct.cashAppPrice.toFixed(2)}</span>
+						</div>
+						<div class="p-2.5 rounded bg-[var(--gh-canvas-subtle)] border gh-border-muted space-y-0.5">
+							<span class="text-[10px] text-amber-500 font-semibold block">Carry Only</span>
+							<span class="font-mono font-bold text-amber-600 dark:text-amber-400">${selectedProduct.carryPrice.toFixed(2)}</span>
+						</div>
+					</div>
+					<div class="text-[11px] text-[var(--gh-fg-muted)] flex justify-between px-1">
+						<span>Cost Basis: <strong class="font-mono">${selectedProduct.costBasis.toFixed(2)}</strong></span>
+						<span>Cash App Margin: <strong class="font-mono text-emerald-500">{((selectedProduct.cashAppPrice - selectedProduct.costBasis) / (selectedProduct.cashAppPrice || 1) * 100).toFixed(1)}%</strong></span>
+					</div>
+				</div>
+
+				<!-- Recent Invoice Sales & Stock Movements -->
+				<div class="space-y-2">
+					<h4 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-muted)] flex items-center gap-1.5">
+						<FileText class="w-4 h-4 text-emerald-500" />
+						Recent Field Sales & Usage ({selectedProduct.transactions?.length || 0})
+					</h4>
+
+					{#if !selectedProduct.transactions || selectedProduct.transactions.length === 0}
+						<p class="text-xs text-[var(--gh-fg-subtle)] italic p-3 gh-card-inset rounded">
+							No recorded inventory transactions yet.
+						</p>
+					{:else}
+						<div class="divide-y gh-border-muted border gh-border-muted rounded gh-card-inset text-xs">
+							{#each selectedProduct.transactions as txn}
+								<div class="p-2.5 flex items-center justify-between">
+									<div class="space-y-0.5">
+										{#if txn.referenceId && onSelectInvoice}
+											<button
+												type="button"
+												onclick={() => {
+													const ref = txn.referenceId;
+													selectedProduct = null;
+													onSelectInvoice?.(ref);
+												}}
+												class="font-mono font-bold text-emerald-500 hover:underline flex items-center gap-1 cursor-pointer"
+												title="Jump to this invoice"
+											>
+												{txn.referenceId}
+												<ArrowUpRight class="w-2.5 h-2.5" />
+											</button>
+										{:else if txn.referenceId}
+											<span class="font-mono font-bold text-[var(--gh-fg-default)]">{txn.referenceId}</span>
+										{:else}
+											<span class="font-semibold capitalize text-[var(--gh-fg-default)]">{txn.transactionType.replace('_', ' ')}</span>
+										{/if}
+										<p class="text-[10px] text-[var(--gh-fg-muted)]">{txn.notes || 'Transaction recorded'}</p>
+									</div>
+									<div class="text-right font-mono">
+										<span class="font-bold {txn.quantityChange < 0 ? 'text-amber-500' : 'text-emerald-500'}">
+											{txn.quantityChange > 0 ? '+' : ''}{txn.quantityChange} {selectedProduct.unit}
+										</span>
+										<span class="text-[10px] text-[var(--gh-fg-subtle)] block">
+											{new Date(txn.createdAt).toLocaleDateString()}
+										</span>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	{/if}

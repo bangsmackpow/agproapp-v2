@@ -367,6 +367,264 @@ invoicesRouter.patch('/:id/status', async (c) => {
 	return c.json({ success: true, invoice: updated });
 });
 
+// Update an existing draft invoice (replace items, adjust stock, recalculate totals)
+invoicesRouter.put('/:id', async (c) => {
+	const user = c.get('user');
+	const id = c.req.param('id');
+	if (!c.env?.DB) return c.json({ error: 'DB not available' }, 500);
+	const db = getDb(c.env.DB);
+
+	const existingInvoice = await db.query.invoices.findFirst({
+		where: eq(invoices.id, id),
+		with: {
+			items: true
+		}
+	});
+
+	if (!existingInvoice) {
+		return c.json({ error: 'Invoice not found' }, 404);
+	}
+
+	if (existingInvoice.status !== 'draft') {
+		return c.json({ error: 'Only draft invoices can be edited' }, 400);
+	}
+
+	const body = await c.req.json<{
+		customerId: string;
+		pricingTier: PricingStrategy;
+		issueDate?: string;
+		dueDate?: string;
+		acresTreated?: number;
+		fieldLocationDescription?: string;
+		notes?: string;
+		termsAndConditions?: string;
+		items: CreateInvoiceItemPayload[];
+	}>();
+
+	if (!body.customerId || !body.items || body.items.length === 0) {
+		return c.json({ error: 'Customer ID and at least one line item are required' }, 400);
+	}
+
+	const customer = await db.query.customers.findFirst({
+		where: eq(customers.id, body.customerId)
+	});
+	if (!customer) {
+		return c.json({ error: 'Customer not found' }, 404);
+	}
+
+	// 1. Restore inventory stock from existing invoice items
+	for (const oldItem of existingInvoice.items) {
+		const prod = await db.query.products.findFirst({
+			where: eq(products.id, oldItem.productId)
+		});
+		if (prod) {
+			await db.update(products).set({
+				currentStock: prod.currentStock + oldItem.quantity
+			}).where(eq(products.id, oldItem.productId));
+		}
+	}
+
+	// Delete old invoice items & compliance logs
+	await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+	await db.delete(iowaComplianceLogs).where(eq(iowaComplianceLogs.invoiceId, id));
+
+	// 2. Resolve new items and pricing
+	const pricingTier = body.pricingTier || existingInvoice.pricingStrategyTier || 'cash_app';
+	let subtotal = 0;
+	let totalCostBasis = 0;
+	const resolvedItems: any[] = [];
+	const complianceLogsToInsert: any[] = [];
+
+	for (const itemPayload of body.items) {
+		const product = await db.query.products.findFirst({
+			where: eq(products.id, itemPayload.productId)
+		});
+		if (!product) {
+			return c.json({ error: `Product ID ${itemPayload.productId} not found` }, 400);
+		}
+
+		if (product.isRegulated) {
+			if (!itemPayload.bolNumber || !itemPayload.orderNumber) {
+				return c.json({
+					error: `Regulated seed ${product.name} requires verified Iowa IDALS Bill of Lading (BOL/CMR) and Order numbers.`
+				}, 400);
+			}
+
+			complianceLogsToInsert.push({
+				bolNumber: itemPayload.bolNumber,
+				orderNumber: itemPayload.orderNumber,
+				productName: product.name,
+				lotNumber: `LOT-IA-${Math.floor(1000 + Math.random() * 9000)}`,
+				quantity: itemPayload.quantity,
+				unit: itemPayload.unit || product.unit
+			});
+		}
+
+		let unitSellingPrice = itemPayload.customUnitPrice;
+		if (unitSellingPrice === undefined || unitSellingPrice === null) {
+			if (pricingTier === 'financed_app') {
+				unitSellingPrice = product.financedAppPrice;
+			} else if (pricingTier === 'cash_app') {
+				unitSellingPrice = product.cashAppPrice;
+			} else if (pricingTier === 'carry') {
+				unitSellingPrice = product.carryPrice;
+			} else {
+				unitSellingPrice = product.cashAppPrice;
+			}
+		}
+
+		const itemTotalPrice = Math.round(unitSellingPrice * itemPayload.quantity * 100) / 100;
+		const itemTotalCost = Math.round(product.costBasis * itemPayload.quantity * 100) / 100;
+		const itemMargin = Math.round((itemTotalPrice - itemTotalCost) * 100) / 100;
+
+		subtotal += itemTotalPrice;
+		totalCostBasis += itemTotalCost;
+
+		resolvedItems.push({
+			productId: product.id,
+			description: `${product.name} (${product.category.toUpperCase()})`,
+			quantity: itemPayload.quantity,
+			unit: itemPayload.unit || product.unit,
+			unitCostBasis: product.costBasis,
+			unitSellingPrice,
+			totalCost: itemTotalCost,
+			totalPrice: itemTotalPrice,
+			marginAmount: itemMargin,
+			bolNumber: itemPayload.bolNumber || null,
+			orderNumber: itemPayload.orderNumber || null,
+			isIowaComplianceVerified: product.isRegulated,
+			droneUnitSerialNumber: itemPayload.droneUnitSerialNumber || null
+		});
+	}
+
+	subtotal = Math.round(subtotal * 100) / 100;
+	totalCostBasis = Math.round(totalCostBasis * 100) / 100;
+	const taxRate = 0.0;
+	const taxAmount = 0.0;
+	const totalAmount = subtotal;
+	const grossMarginAmount = Math.round((subtotal - totalCostBasis) * 100) / 100;
+	const grossMarginPercent = subtotal > 0 ? Math.round((grossMarginAmount / subtotal) * 10000) / 100 : 0;
+
+	// 3. Update invoice
+	await db.update(invoices).set({
+		customerId: customer.id,
+		pricingStrategyTier: pricingTier,
+		issueDate: body.issueDate || existingInvoice.issueDate,
+		dueDate: body.dueDate || existingInvoice.dueDate,
+		subtotal,
+		taxRate,
+		taxAmount,
+		totalAmount,
+		totalCostBasis,
+		grossMarginAmount,
+		grossMarginPercent,
+		acresTreated: body.acresTreated !== undefined ? body.acresTreated : existingInvoice.acresTreated,
+		fieldLocationDescription: body.fieldLocationDescription !== undefined ? body.fieldLocationDescription : existingInvoice.fieldLocationDescription,
+		notes: body.notes !== undefined ? body.notes : existingInvoice.notes,
+		termsAndConditions: body.termsAndConditions || existingInvoice.termsAndConditions,
+		updatedAt: new Date()
+	}).where(eq(invoices.id, id));
+
+	// 4. Insert updated items & deduct inventory
+	for (const it of resolvedItems) {
+		const itemId = `itm_${crypto.randomUUID().slice(0, 8)}`;
+		await db.insert(invoiceItems).values({
+			id: itemId,
+			invoiceId: id,
+			productId: it.productId,
+			description: it.description,
+			quantity: it.quantity,
+			unit: it.unit,
+			unitCostBasis: it.unitCostBasis,
+			unitSellingPrice: it.unitSellingPrice,
+			pricingTierApplied: pricingTier,
+			totalCost: it.totalCost,
+			totalPrice: it.totalPrice,
+			marginAmount: it.marginAmount,
+			bolNumber: it.bolNumber,
+			orderNumber: it.orderNumber,
+			isIowaComplianceVerified: it.isIowaComplianceVerified,
+			droneUnitSerialNumber: it.droneUnitSerialNumber
+		});
+
+		const currentProd = await db.query.products.findFirst({
+			where: eq(products.id, it.productId)
+		});
+		if (currentProd) {
+			const updatedStock = Math.max(0, currentProd.currentStock - it.quantity);
+			await db.update(products).set({ currentStock: updatedStock }).where(eq(products.id, it.productId));
+		}
+	}
+
+	// 5. Insert compliance logs
+	for (const comp of complianceLogsToInsert) {
+		await db.insert(iowaComplianceLogs).values({
+			id: `log_ia_${crypto.randomUUID().slice(0, 8)}`,
+			customerId: customer.id,
+			invoiceId: id,
+			bolNumber: comp.bolNumber,
+			orderNumber: comp.orderNumber,
+			regulatedProduct: comp.productName,
+			cropType: comp.productName.toLowerCase().includes('bean') ? 'Soybeans' : 'Corn',
+			lotNumber: comp.lotNumber,
+			quantity: comp.quantity,
+			unit: comp.unit,
+			verifiedByUserId: user.id,
+			complianceStatus: 'verified',
+			auditNotes: `Updated Invoice #${existingInvoice.invoiceNumber} for Customer: ${customer.name}. Compliance numbers verified.`
+		});
+	}
+
+	const updatedInvoice = await db.query.invoices.findFirst({
+		where: eq(invoices.id, id),
+		with: {
+			customer: true,
+			items: { with: { product: true } },
+			complianceLogs: true
+		}
+	});
+
+	return c.json({ success: true, invoice: updatedInvoice });
+});
+
+// Delete a draft invoice
+invoicesRouter.delete('/:id', async (c) => {
+	const id = c.req.param('id');
+	if (!c.env?.DB) return c.json({ error: 'DB not available' }, 500);
+	const db = getDb(c.env.DB);
+
+	const existing = await db.query.invoices.findFirst({
+		where: eq(invoices.id, id),
+		with: { items: true }
+	});
+
+	if (!existing) {
+		return c.json({ error: 'Invoice not found' }, 404);
+	}
+
+	if (existing.status !== 'draft') {
+		return c.json({ error: 'Only draft invoices can be deleted' }, 400);
+	}
+
+	// Restore inventory
+	for (const item of existing.items) {
+		const prod = await db.query.products.findFirst({
+			where: eq(products.id, item.productId)
+		});
+		if (prod) {
+			await db.update(products).set({
+				currentStock: prod.currentStock + item.quantity
+			}).where(eq(products.id, item.productId));
+		}
+	}
+
+	await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+	await db.delete(iowaComplianceLogs).where(eq(iowaComplianceLogs.invoiceId, id));
+	await db.delete(invoices).where(eq(invoices.id, id));
+
+	return c.json({ success: true, message: `Draft invoice ${existing.invoiceNumber} deleted` });
+});
+
 function renderInvoiceEmailHtml(inv: any, customMessage?: string, attachCompliance = true): string {
 	const hasSeedCompliance = inv.items?.some((it: any) => it.isIowaComplianceVerified);
 	const complianceLogs = inv.complianceLogs || [];
