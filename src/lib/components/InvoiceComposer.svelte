@@ -286,10 +286,10 @@
 		<div>
 			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
 				<Calculator class="w-5 h-5 text-emerald-500" />
-				New Agricultural Sales & Drone Application Invoice
+				New Invoice
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Configure customer profile, pricing tiers, and satisfy Iowa State seed regulatory compliance tokens.
+				Select customer, pricing tier, and add line items.
 			</p>
 		</div>
 

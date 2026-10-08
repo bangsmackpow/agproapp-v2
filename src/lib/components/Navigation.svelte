@@ -31,14 +31,14 @@
 
 	const navItems: NavItem[] = [
 		{ id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-		{ id: 'invoices', label: 'Invoicing & Sales', icon: FileText },
+		{ id: 'invoices', label: 'Invoices', icon: FileText },
 		{ id: 'inventory', label: 'Inventory', icon: Package },
-		{ id: 'ingestion', label: 'Auto-Import & BOL', icon: UploadCloud, requiredRole: 'manager' },
-		{ id: 'customers', label: 'CRM & Accounts', icon: Users },
-		{ id: 'compliance', label: 'Iowa Seed Audits', icon: ShieldCheck, badge: 'IDALS' },
-		{ id: 'checks', label: 'Checkwriting', icon: CreditCard, requiredRole: 'admin', badge: 'Admin' },
-		{ id: 'staff', label: 'Staff & Roles', icon: UserCheck, requiredRole: 'admin', badge: 'Admin' },
-		{ id: 'audit-logs', label: 'Security Logs', icon: ScrollText, requiredRole: 'admin' }
+		{ id: 'customers', label: 'Customers', icon: Users },
+		{ id: 'ingestion', label: 'BOL & Ingestion', icon: UploadCloud, requiredRole: 'manager' },
+		{ id: 'compliance', label: 'Seed Audits', icon: ShieldCheck, badge: 'IDALS' },
+		{ id: 'checks', label: 'Checks', icon: CreditCard, requiredRole: 'admin', badge: 'Admin' },
+		{ id: 'staff', label: 'Staff', icon: UserCheck, requiredRole: 'admin', badge: 'Admin' },
+		{ id: 'audit-logs', label: 'Audit Logs', icon: ScrollText, requiredRole: 'admin' }
 	];
 
 	function isItemLocked(item: NavItem): boolean {

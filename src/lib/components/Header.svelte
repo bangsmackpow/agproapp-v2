@@ -107,7 +107,7 @@
 					></div>
 					<div class="absolute right-0 mt-1 w-72 gh-card shadow-xl z-50 py-1 text-xs animate-in fade-in">
 						<!-- User Identity Details -->
-						<div class="px-3.5 py-3 border-b gh-border-muted bg-[var(--gh-canvas-inset)]">
+						<div class="px-3.5 py-2.5 border-b gh-border-muted bg-[var(--gh-canvas-inset)]">
 							<div class="flex items-center justify-between">
 								<p class="font-bold text-[var(--gh-fg-default)]">{auth.user?.name}</p>
 								<span class={`gh-badge ${roleColors[auth.role]} text-[9px] uppercase font-mono`}>
@@ -115,42 +115,6 @@
 								</span>
 							</div>
 							<p class="text-[11px] text-[var(--gh-fg-muted)] font-mono">{auth.user?.email}</p>
-							<p class="text-[11px] text-[var(--gh-fg-subtle)] mt-0.5">{auth.user?.title}</p>
-						</div>
-
-						<!-- RBAC Security Privileges Summary -->
-						<div class="px-3.5 py-2.5 border-b gh-border-muted space-y-1.5 text-[11px]">
-							<p class="text-[10px] font-semibold uppercase tracking-wider text-[var(--gh-fg-subtle)]">
-								RBAC Authorization Privileges
-							</p>
-							<div class="flex items-center justify-between text-[11px]">
-								<span class="text-[var(--gh-fg-muted)]">CRM & Invoicing:</span>
-								<span class="text-emerald-500 font-semibold flex items-center gap-1">
-									<Check class="w-3 h-3" /> Full
-								</span>
-							</div>
-							<div class="flex items-center justify-between text-[11px]">
-								<span class="text-[var(--gh-fg-muted)]">Inventory Edits & Ingestion:</span>
-								{#if auth.canManageInventory}
-									<span class="text-emerald-500 font-semibold flex items-center gap-1">
-										<Check class="w-3 h-3" /> Full
-									</span>
-								{:else}
-									<span class="text-amber-500 font-semibold">Read Only</span>
-								{/if}
-							</div>
-							<div class="flex items-center justify-between text-[11px]">
-								<span class="text-[var(--gh-fg-muted)]">Corporate Checkwriting:</span>
-								{#if auth.canWriteChecks}
-									<span class="text-emerald-500 font-semibold flex items-center gap-1">
-										<Check class="w-3 h-3" /> Authorized
-									</span>
-								{:else}
-									<span class="text-rose-500 font-semibold flex items-center gap-1">
-										<Lock class="w-3 h-3" /> Locked (Admin)
-									</span>
-								{/if}
-							</div>
 						</div>
 
 						<!-- Account Actions -->

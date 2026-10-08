@@ -4,21 +4,16 @@
 	import {
 		DollarSign,
 		Plane,
-		ShieldCheck,
-		Package,
 		FileText,
-		UploadCloud,
-		Users,
 		ArrowRight,
 		Clock,
+		CheckCircle2,
 		AlertCircle
 	} from 'lucide-svelte';
 
 	let { onNavigate } = $props<{ onNavigate: (tab: string) => void }>();
 
 	let invoices = $state<any[]>([]);
-	let products = $state<any[]>([]);
-	let complianceCount = $state<number>(0);
 	let loading = $state(false);
 
 	$effect(() => {
@@ -27,15 +22,8 @@
 
 	async function loadStats() {
 		loading = true;
-		const [invRes, prodRes, compRes] = await Promise.all([
-			apiFetch<{ invoices: any[] }>('/invoices'),
-			apiFetch<{ products: any[] }>('/inventory'),
-			apiFetch<{ logs: any[] }>('/compliance')
-		]);
-
-		if (invRes.data) invoices = invRes.data.invoices || [];
-		if (prodRes.data) products = prodRes.data.products || [];
-		if (compRes.data) complianceCount = compRes.data.logs?.length || 0;
+		const res = await apiFetch<{ invoices: any[] }>('/invoices');
+		if (res.data) invoices = res.data.invoices || [];
 		loading = false;
 	}
 
@@ -47,32 +35,28 @@
 		invoices.reduce((sum, inv) => sum + (inv.acresTreated || 0), 0)
 	);
 
-	let inventoryValuation = $derived(
-		products.reduce((sum, prod) => sum + prod.costBasis * prod.currentStock, 0)
+	let paidCount = $derived(invoices.filter((i) => i.status === 'paid').length);
+	let pendingCount = $derived(invoices.filter((i) => i.status === 'sent' || i.status === 'draft').length);
+	let pendingAmount = $derived(
+		invoices
+			.filter((i) => i.status === 'sent' || i.status === 'draft')
+			.reduce((sum, i) => sum + i.totalAmount, 0)
 	);
 </script>
 
-<div class="space-y-6">
-	<!-- Hero Welcome -->
-	<div class="gh-card p-6 border-l-4 border-l-emerald-500 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="space-y-5">
+	<!-- Clean Top Bar -->
+	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b gh-border-muted">
 		<div>
-			<div class="flex items-center gap-2">
-				<span class="gh-badge gh-badge-success text-[10px] uppercase font-mono">
-					AgPro Solutions &bull; Creston, IA
-				</span>
-				<span class="text-xs text-[var(--gh-fg-muted)]">Southwest Iowa &bull; Putting The Farmer Back In Control!</span>
-			</div>
-			<h2 class="text-xl font-bold text-[var(--gh-fg-default)] mt-1">
-				Crop Protection, Channel® Seed & Custom Drone Application
+			<h2 class="text-lg font-bold text-[var(--gh-fg-default)]">
+				Operations Dashboard
 			</h2>
-			<p class="text-xs text-[var(--gh-fg-muted)] mt-1 max-w-2xl">
-				Logged in as <span class="font-semibold text-[var(--gh-fg-default)]">{auth.user?.name || 'Staff'}</span> (<span class="uppercase font-mono text-emerald-500 font-bold">{auth.role}</span>).
-				Family- and veteran-owned agricultural operations supporting local growers across Union, Adams, Clarke, Ringgold, Taylor, and Adair counties.
+			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
+				Logged in as <span class="font-medium text-[var(--gh-fg-default)]">{auth.user?.name || 'Staff'}</span> &bull; <span class="uppercase font-mono text-emerald-500 font-semibold">{auth.role}</span>
 			</p>
 		</div>
 
-		<!-- Action Quick Links -->
-		<div class="flex flex-wrap items-center gap-2">
+		<div class="flex items-center gap-2">
 			<button
 				type="button"
 				onclick={() => onNavigate('invoices')}
@@ -81,95 +65,62 @@
 				<FileText class="w-3.5 h-3.5" />
 				New Invoice
 			</button>
-			{#if auth.canManageInventory}
-				<button
-					type="button"
-					onclick={() => onNavigate('ingestion')}
-					class="gh-btn text-xs font-semibold"
-				>
-					<UploadCloud class="w-3.5 h-3.5 text-emerald-500" />
-					Ingest BOL
-				</button>
-			{/if}
 		</div>
 	</div>
 
-	<!-- High-Level Metric Tiles (GitHub Card Aesthetic) -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-		<!-- Tile 1: Revenue -->
-		<div class="gh-card p-4 space-y-2">
+	<!-- Metric Tiles -->
+	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+		<!-- Tile 1: Total Revenue -->
+		<div class="gh-card p-4 space-y-1.5">
 			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
-				<span class="text-xs font-bold uppercase tracking-wider">Gross Sales Volume</span>
+				<span class="text-xs font-semibold uppercase tracking-wider">Total Sales Billed</span>
 				<DollarSign class="w-4 h-4 text-emerald-500" />
 			</div>
-			<div class="flex items-baseline gap-2">
-				<span class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
-					${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-				</span>
+			<div class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
+				${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 			</div>
 			<span class="text-[11px] text-[var(--gh-fg-muted)] block">
-				{invoices.length} issued sales transactions
+				{invoices.length} total invoices ({paidCount} paid)
 			</span>
 		</div>
 
-		<!-- Tile 2: Drone Acres -->
-		<div class="gh-card p-4 space-y-2">
+		<!-- Tile 2: Open Receivables / Pending -->
+		<div class="gh-card p-4 space-y-1.5">
 			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
-				<span class="text-xs font-bold uppercase tracking-wider">Drone Coverage</span>
+				<span class="text-xs font-semibold uppercase tracking-wider">Pending / Unpaid</span>
+				<Clock class="w-4 h-4 text-amber-500" />
+			</div>
+			<div class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
+				${pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+			</div>
+			<span class="text-[11px] text-[var(--gh-fg-muted)] block">
+				{pendingCount} drafts & sent invoices
+			</span>
+		</div>
+
+		<!-- Tile 3: Drone Coverage -->
+		<div class="gh-card p-4 space-y-1.5">
+			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
+				<span class="text-xs font-semibold uppercase tracking-wider">Drone Coverage</span>
 				<Plane class="w-4 h-4 text-blue-500" />
 			</div>
-			<div class="flex items-baseline gap-2">
-				<span class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
-					{totalAcres.toLocaleString()} <span class="text-sm font-sans font-normal text-[var(--gh-fg-muted)]">acres</span>
-				</span>
+			<div class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
+				{totalAcres.toLocaleString()} <span class="text-sm font-sans font-normal text-[var(--gh-fg-muted)]">acres</span>
 			</div>
 			<span class="text-[11px] text-[var(--gh-fg-muted)] block">
-				DJI Agras T50 precision applications
-			</span>
-		</div>
-
-		<!-- Tile 3: Regulated Seed Audits -->
-		<div class="gh-card p-4 space-y-2">
-			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
-				<span class="text-xs font-bold uppercase tracking-wider">Iowa Seed Audits</span>
-				<ShieldCheck class="w-4 h-4 text-emerald-500" />
-			</div>
-			<div class="flex items-baseline gap-2">
-				<span class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
-					{complianceCount}
-				</span>
-				<span class="text-xs text-[var(--gh-fg-muted)]">Tokens Verified</span>
-			</div>
-			<span class="text-[11px] text-[var(--gh-fg-muted)] block">
-				100% IDALS Straight BOL audit compliance
-			</span>
-		</div>
-
-		<!-- Tile 4: Inventory Valuation -->
-		<div class="gh-card p-4 space-y-2">
-			<div class="flex items-center justify-between text-[var(--gh-fg-muted)]">
-				<span class="text-xs font-bold uppercase tracking-wider">Stock Valuation</span>
-				<Package class="w-4 h-4 text-amber-500" />
-			</div>
-			<div class="flex items-baseline gap-2">
-				<span class="text-2xl font-bold font-mono text-[var(--gh-fg-default)]">
-					${inventoryValuation.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-				</span>
-			</div>
-			<span class="text-[11px] text-[var(--gh-fg-muted)] block">
-				Across {products.length} distinct SKUs & categories
+				Custom aerial application
 			</span>
 		</div>
 	</div>
 
-	<!-- Recent Invoices & Quick Dispatch Feed -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-		<!-- Left: Recent Invoices -->
-		<div class="gh-card p-4 space-y-3">
+	<!-- Recent Invoices & Status Breakdown -->
+	<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+		<!-- Left: Recent Invoices (2 cols) -->
+		<div class="lg:col-span-2 gh-card p-4 space-y-3">
 			<div class="flex items-center justify-between pb-2 border-b gh-border-muted">
 				<h3 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-default)] flex items-center gap-1.5">
 					<FileText class="w-4 h-4 text-emerald-500" />
-					Recent Invoices & State Machine
+					Recent Invoices
 				</h3>
 				<button
 					type="button"
@@ -180,90 +131,97 @@
 				</button>
 			</div>
 
-			<div class="divide-y gh-border-muted text-xs">
-				{#each invoices.slice(0, 5) as inv}
-					<div class="py-2.5 flex items-center justify-between gap-3">
-						<div>
-							<div class="flex items-center gap-2">
-								<span class="font-mono font-bold text-emerald-500">{inv.invoiceNumber}</span>
-								<span class="gh-badge text-[9px] uppercase">{inv.status}</span>
+			{#if loading}
+				<div class="p-6 text-center text-xs text-[var(--gh-fg-muted)]">Loading invoices...</div>
+			{:else if invoices.length === 0}
+				<div class="p-6 text-center text-xs text-[var(--gh-fg-muted)]">No invoices yet.</div>
+			{:else}
+				<div class="divide-y gh-border-muted text-xs">
+					{#each invoices.slice(0, 6) as inv}
+						<div class="py-2.5 flex items-center justify-between gap-3">
+							<div>
+								<div class="flex items-center gap-2">
+									<span class="font-mono font-bold text-emerald-500">{inv.invoiceNumber}</span>
+									<span class="gh-badge text-[9px] uppercase {inv.status === 'paid' ? 'gh-badge-success' : inv.status === 'sent' ? 'border-blue-500/40 text-blue-500' : ''}">
+										{inv.status}
+									</span>
+								</div>
+								<p class="text-[11px] text-[var(--gh-fg-muted)] mt-0.5">
+									{inv.customer?.name || 'Customer'} &bull; {inv.issueDate}
+								</p>
 							</div>
-							<p class="text-[11px] text-[var(--gh-fg-muted)] mt-0.5">
-								{inv.customer?.name} &bull; {inv.issueDate}
-							</p>
-						</div>
 
-						<div class="text-right font-mono">
-							<span class="font-bold text-[var(--gh-fg-default)]">
-								${inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-							</span>
-							<span class="block text-[10px] text-emerald-500">
-								+${inv.grossMarginAmount?.toFixed(0)} margin
-							</span>
+							<div class="text-right font-mono">
+								<span class="font-bold text-[var(--gh-fg-default)]">
+									${inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+								</span>
+								{#if inv.acresTreated}
+									<span class="block text-[10px] text-[var(--gh-fg-muted)]">
+										{inv.acresTreated} acres
+									</span>
+								{/if}
+							</div>
 						</div>
-					</div>
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
-		<!-- Right: Quick Partner Ingestion Overview -->
+		<!-- Right: Quick Navigation & Status Counts (1 col) -->
 		<div class="gh-card p-4 space-y-3">
-			<div class="flex items-center justify-between pb-2 border-b gh-border-muted">
-				<h3 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-default)] flex items-center gap-1.5">
-					<UploadCloud class="w-4 h-4 text-blue-500" />
-					Key Vendor Integrations & Parsers
+			<div class="pb-2 border-b gh-border-muted">
+				<h3 class="text-xs font-bold uppercase tracking-wider text-[var(--gh-fg-default)]">
+					Invoice Status Breakdown
 				</h3>
-				{#if auth.canManageInventory}
-					<button
-						type="button"
-						onclick={() => onNavigate('ingestion')}
-						class="text-xs text-emerald-500 hover:underline flex items-center gap-1"
-					>
-						Open Ingestion Engine <ArrowRight class="w-3 h-3" />
-					</button>
-				{/if}
 			</div>
 
 			<div class="space-y-2 text-xs">
-				<div class="p-2.5 rounded gh-card-inset border gh-border-muted flex items-start justify-between gap-2">
-					<div>
-						<p class="font-bold text-[var(--gh-fg-default)]">Channel Straight BOL Manifests</p>
-						<p class="text-[11px] text-[var(--gh-fg-muted)]">
-							Isolates BOL/CMR # and Order # for Iowa seed regulatory compliance.
-						</p>
+				<div class="p-3 rounded gh-card-inset border gh-border-muted flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<CheckCircle2 class="w-4 h-4 text-emerald-500" />
+						<span class="font-medium text-[var(--gh-fg-default)]">Paid</span>
 					</div>
-					<span class="gh-badge gh-badge-success text-[10px]">IDALS Certified</span>
+					<span class="font-bold font-mono text-[var(--gh-fg-default)]">{paidCount}</span>
 				</div>
 
-				<div class="p-2.5 rounded gh-card-inset border gh-border-muted flex items-start justify-between gap-2">
-					<div>
-						<p class="font-bold text-[var(--gh-fg-default)]">Wickman Chemical</p>
-						<p class="text-[11px] text-[var(--gh-fg-muted)]">
-							Ventas, Tenkoz 4L, Xsate 53.8%, pre & post corn/soybean herbicide rates.
-						</p>
+				<div class="p-3 rounded gh-card-inset border gh-border-muted flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<Clock class="w-4 h-4 text-blue-500" />
+						<span class="font-medium text-[var(--gh-fg-default)]">Sent / Awaiting Payment</span>
 					</div>
-					<span class="gh-badge text-[10px]">Active</span>
+					<span class="font-bold font-mono text-[var(--gh-fg-default)]">
+						{invoices.filter((i) => i.status === 'sent').length}
+					</span>
 				</div>
 
-				<div class="p-2.5 rounded gh-card-inset border gh-border-muted flex items-start justify-between gap-2">
-					<div>
-						<p class="font-bold text-[var(--gh-fg-default)]">Atticus LLC</p>
-						<p class="text-[11px] text-[var(--gh-fg-muted)]">
-							Post-patent chemistry, EPA registration numbers & active ingredients.
-						</p>
+				<div class="p-3 rounded gh-card-inset border gh-border-muted flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<FileText class="w-4 h-4 text-[var(--gh-fg-muted)]" />
+						<span class="font-medium text-[var(--gh-fg-default)]">Draft</span>
 					</div>
-					<span class="gh-badge text-[10px]">Active</span>
+					<span class="font-bold font-mono text-[var(--gh-fg-default)]">
+						{invoices.filter((i) => i.status === 'draft').length}
+					</span>
 				</div>
+			</div>
 
-				<div class="p-2.5 rounded gh-card-inset border gh-border-muted flex items-start justify-between gap-2">
-					<div>
-						<p class="font-bold text-[var(--gh-fg-default)]">I & B Ag Supply</p>
-						<p class="text-[11px] text-[var(--gh-fg-muted)]">
-							Banjo pumps, dry AMS water conditioners, DJI T50 atomizing nozzles.
-						</p>
-					</div>
-					<span class="gh-badge text-[10px]">Active</span>
-				</div>
+			<div class="pt-2 border-t gh-border-muted space-y-1.5">
+				<button
+					type="button"
+					onclick={() => onNavigate('customers')}
+					class="w-full gh-btn text-xs justify-between"
+				>
+					<span>Open Customer Directory</span>
+					<ArrowRight class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
+				</button>
+				<button
+					type="button"
+					onclick={() => onNavigate('inventory')}
+					class="w-full gh-btn text-xs justify-between"
+				>
+					<span>Open Inventory</span>
+					<ArrowRight class="w-3 h-3 text-[var(--gh-fg-subtle)]" />
+				</button>
 			</div>
 		</div>
 	</div>

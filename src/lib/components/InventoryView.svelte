@@ -88,10 +88,10 @@
 		<div>
 			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
 				<Package class="w-5 h-5 text-emerald-500" />
-				Unified Multi-Category Inventory Architecture
+				Inventory
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Chemicals, Regulated Seed, Serialized Drones, and Misc Agronomy Supplies with dynamic 3-tier markups.
+				Track products, on-hand stock, and pricing tiers.
 			</p>
 		</div>
 

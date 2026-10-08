@@ -73,10 +73,10 @@
 		<div>
 			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
 				<Users class="w-5 h-5 text-emerald-500" />
-				CRM & Farm Customer Accounts
+				Customers
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Grower profiles, field staging locations, credit balances, and historical Iowa seed audit trails.
+				Customer directory, contact details, and purchase history.
 			</p>
 		</div>
 

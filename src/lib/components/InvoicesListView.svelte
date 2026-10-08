@@ -69,10 +69,10 @@
 		<div>
 			<h2 class="text-lg font-bold text-[var(--gh-fg-default)] flex items-center gap-2">
 				<FileText class="w-5 h-5 text-emerald-500" />
-				Invoicing & Sales Lifecycle Engine
+				Invoices
 			</h2>
 			<p class="text-xs text-[var(--gh-fg-muted)] mt-0.5">
-				Track invoice states (Draft &rarr; Sent &rarr; Paid), pricing strategy tiers, and Iowa regulatory audit verification.
+				Create, track, and dispatch customer invoices.
 			</p>
 		</div>
 
